@@ -97,7 +97,7 @@ def get_posts_until_date(driver, cutoff_datetime):
                 post_datetime = datetime.strptime(fecha_str_traducida, "%d %b %Y")
                 is_a_valid_post = check_league_board_post(post)
 
-                if not is_a_valid_post:
+                if not is_a_valid_post and post_datetime >= cutoff_datetime:
                     continue
                 elif post_datetime >= cutoff_datetime:
                     postToRet.append(post)
@@ -144,6 +144,7 @@ def mostrar_texto_h3(posts):
             date_str = date_elem.get_attribute("title").split(',')[0]
 
             cardName = h3_element.text.strip()
+            # print(f'{cardName} ({date_str})')
             if cardName == 'MERCADO DE FICHAJES':
                 print(f"\n📌 Post {i}:")
                 print(f"   - {h3_element.text.strip()} ({date_str})")
@@ -152,13 +153,33 @@ def mostrar_texto_h3(posts):
                 for fichaje in fichajes:
                     fichajeH3 = fichaje.find_element(By.TAG_NAME, "h3")
                     fichajeName = fichajeH3.text.strip()
-                    print(f"      - {fichajeName}")
-
-            # elif cardName == 'FICHAJES':
-            #     print(f"\n📌 Post {i}:")
-            #     print(f"   - {h3_element.text.strip()}")
-
-
+                    userlink = fichaje.find_element(By.TAG_NAME, 'user-link')
+                    userName = userlink.find_element(By.TAG_NAME, 'a').text.strip()
+                    valorCompraStr = fichaje.find_element(By.TAG_NAME, 'strong').text.strip()
+                    valor_limpio = valorCompraStr.replace('.', '').replace('€', '').replace(' ', '')
+                    valorCompra = int(valor_limpio)
+                    print(f"      - {fichajeName}: Comprado por {userName} por {valorCompra} €")
+            elif cardName == 'FICHAJES':
+                print(f"\n📌 Post {i}:")
+                print(f"   - {h3_element.text.strip()} ({date_str})")
+                content_transfer_div = post.find_element(By.CSS_SELECTOR, "div.content.transfer")
+                jugadores_transferidos = content_transfer_div.find_elements(By.TAG_NAME, 'li')
+                for jugador in jugadores_transferidos:
+                    jugadorH3 = jugador.find_element(By.TAG_NAME, "h3")
+                    fichajeName = jugadorH3.find_element(By.TAG_NAME, "a").text.strip()
+                    valorVentaStr = jugador.find_element(By.TAG_NAME, 'strong').text.strip()
+                    valor_limpio = valorVentaStr.replace('.', '').replace('€', '').replace(' ', '')
+                    valorVenta = int(valor_limpio)
+                    print(f"      - {fichajeName} vendido por {valorVenta} €")
+            elif cardName == 'CAMBIO DE NOMBRE':
+                print(f"\n📌 Post {i}:")
+                print(f"   - {h3_element.text.strip()}")
+                content_user_name_div = post.find_element(By.CSS_SELECTOR, "div.content.userName")
+                cambioUsuarioLi = content_user_name_div.find_elements(By.TAG_NAME, 'li')[0]
+                userlink = cambioUsuarioLi.find_elements(By.TAG_NAME, 'user-link')[1]
+                userNameOld = userlink.find_element(By.TAG_NAME, 'a').text.strip()
+                userNameNew = cambioUsuarioLi.find_element(By.TAG_NAME, 'strong').text.strip()
+                print(f"      - {userNameOld} ha cambiado su nombre a {userNameNew}")
 
         except Exception as e:
             print(f"   ⚠️ No se pudo encontrar el h3 esperado: {e}")

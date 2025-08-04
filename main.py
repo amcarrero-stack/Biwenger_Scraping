@@ -52,7 +52,7 @@ def main():
         log_message(f"Usuarios detectados (excluyendo {NOMBRE_MI_EQUIPO}): {nombres_usuarios}")
 
         driver.get(URL_BIWENGER_HOME)
-        fecha_str = '2 ago 2025'
+        fecha_str = '29 jul 2025'
         fecha_str_traducida = traducir_mes(fecha_str)
         cutoff_datetime = datetime.strptime(fecha_str_traducida, "%d %b %Y")
         posts = get_posts_until_date(driver, cutoff_datetime)
