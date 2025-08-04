@@ -136,13 +136,6 @@ def traducir_mes(mes_es):
         mes_es = mes_es.replace(f" {esp} ", f" {eng} ")
     return mes_es
 def mostrar_texto_h3(posts):
-    """
-    Muestra por consola solo el texto del <h3> que esté dentro del div con clase "header ng-star-inserted"
-    para cada <league-board-post>.
-
-    Parámetro:
-    - posts: lista de WebElements <league-board-post>
-    """
     for i, post in enumerate(posts, start=1):
         try:
             header_div = post.find_element(By.CSS_SELECTOR, "div.header.ng-star-inserted")
@@ -151,7 +144,6 @@ def mostrar_texto_h3(posts):
             date_str = date_elem.get_attribute("title").split(',')[0]
 
             cardName = h3_element.text.strip()
-            print(f"{cardName} ({date_str})")
             if cardName == 'MERCADO DE FICHAJES':
                 print(f"\n📌 Post {i}:")
                 print(f"   - {h3_element.text.strip()} ({date_str})")
