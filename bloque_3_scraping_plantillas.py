@@ -6,20 +6,6 @@ from utils import log_message
 from config import NOMBRE_MI_EQUIPO
 import time
 
-# def obtener_usuarios(driver):
-#     """
-#     En la pestaña Liga, extrae enlaces y nombres de usuarios (excluye tu usuario).
-#     Devuelve lista de tuples (nombre_usuario, url_usuario).
-#     """
-#     usuarios = []
-#     WebDriverWait(driver, 15).until(EC.presence_of_element_located((By.CSS_SELECTOR, "a[role='button'][aria-haspopup='dialog']")))
-#     enlaces = driver.find_elements(By.CSS_SELECTOR, "a[role='button'][aria-haspopup='dialog']")
-#     for a in enlaces:
-#         nombre = a.text.strip()
-#         href = a.get_attribute("href")
-#         if nombre != NOMBRE_MI_EQUIPO:
-#             usuarios.append((nombre, href))
-#     return usuarios
 def obtener_usuarios(driver):
     usuarios = []
     cards = driver.find_elements(By.CSS_SELECTOR, "user-card")
