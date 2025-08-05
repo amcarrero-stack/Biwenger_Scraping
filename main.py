@@ -22,7 +22,7 @@ def main():
         # Abrimos directamente la home
         log_message("🌐 Navegando a la página principal de Biwenger...")
         driver.get("https://biwenger.as.com/")
-        time.sleep(2)  # Esperar a que cargue del todo
+        time.sleep(3)  # Esperar a que cargue del todo
         web_element_agree = driver.find_elements(By.ID, 'didomi-notice-agree-button')[0]
         web_element_agree.click()
 
@@ -37,15 +37,15 @@ def main():
 
         web_element_email_input = driver.find_elements(By.NAME, 'password')[0]
         web_element_email_input.send_keys("Carrero1110")
-        time.sleep(2)
+        time.sleep(3)
 
         web_element_boton_login = driver.find_elements(By.CSS_SELECTOR, 'button.btn.squared')[0]
         web_element_boton_login.click()
 
         input("🔒 Inicia sesión (si no lo estás) y pulsa Enter para continuar...")
-
+        time.sleep(1)
         driver.get(URL_BIWENGER_LIGA)
-        time.sleep(3)
+        time.sleep(1)
         usuarios = obtener_usuarios(driver)
 
         nombres_usuarios = [u[0] for u in usuarios]

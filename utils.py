@@ -1,15 +1,12 @@
 import time
-import os
-from datetime import datetime
+import html_to_json
 from pathlib import Path
 from selenium import webdriver
-from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.common.by import By
-import chromedriver_autoinstaller
 from config import CARPETA_BBDD, CARPETA_RESULTADOS, CARPETA_LOGS, LOG_FILE, HTML_FILE, EXCEL_BBDD
 from selenium.webdriver.common.by import By
-from datetime import datetime
+from datetime import datetime, date
+from collections import Counter
 
 CHROMEDRIVER_PATH = r"C:\Users\Tito\Desktop\Biwenger_Scraping\chromedriver.exe"
 CHROME_PROFILE_PATH = r"C:\Users\Tito\AppData\Local\Google\Chrome\User Data"
@@ -84,7 +81,7 @@ def get_posts_until_date(driver, cutoff_datetime):
     postToOld = []
     while True:
         time.sleep(1)
-        all_posts = driver.find_elements(By.CSS_SELECTOR, 'league-board-post')
+        all_posts = cleanPosts(driver.find_elements(By.CSS_SELECTOR, 'league-board-post'))
         print(f'all_posts len es: {len(all_posts)}')
         postToRet = []
         for post in all_posts:
@@ -109,13 +106,39 @@ def get_posts_until_date(driver, cutoff_datetime):
 
         # Hacemos scroll para cargar más posts
         driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-        time.sleep(3)
+        time.sleep(1)
         new_height = driver.execute_script("return document.body.scrollHeight")
         if new_height == last_height:
             # Ya no hay más contenido para cargar
             break
         last_height = new_height
     return postToOld
+
+def cleanPosts(all_posts):
+    hoy = date.today()
+    firstIteration = True
+    postToRet = []
+    for post in all_posts:
+        try:
+            date_elem = post.find_element(By.CSS_SELECTOR, "div.date")
+            date_str = date_elem.get_attribute("title").split(',')[0]  # Ej: "29 jul 2025, 13:37:05"
+            fecha_str_traducida = traducir_mes(date_str)
+            post_datetime = datetime.strptime(fecha_str_traducida, "%d %b %Y")
+            post_date = post_datetime.date()
+
+            if firstIteration:
+                if post_date < hoy:
+                    continue
+                else:
+                    firstIteration = False
+                    postToRet.append(post)
+                    continue
+            else:
+                postToRet.append(post)
+        except Exception as e:
+            print(f"⚠️ Excepcion en cleanPosts: {e.__str__()}")
+
+    return postToRet
 
 def check_league_board_post(league_board_post):
     try:
@@ -137,6 +160,8 @@ def traducir_mes(mes_es):
     return mes_es
 def mostrar_texto_h3(posts):
     for i, post in enumerate(posts, start=1):
+        # output_json = html_to_json.convert(post)
+        # print(f'output_json es: {cardName}')
         try:
             header_div = post.find_element(By.CSS_SELECTOR, "div.header.ng-star-inserted")
             h3_element = header_div.find_element(By.TAG_NAME, "h3")
@@ -160,17 +185,22 @@ def mostrar_texto_h3(posts):
                     valorCompra = int(valor_limpio)
                     print(f"      - {fichajeName}: Comprado por {userName} por {valorCompra} €")
             elif cardName == 'FICHAJES':
-                print(f"\n📌 Post {i}:")
-                print(f"   - {h3_element.text.strip()} ({date_str})")
-                content_transfer_div = post.find_element(By.CSS_SELECTOR, "div.content.transfer")
-                jugadores_transferidos = content_transfer_div.find_elements(By.TAG_NAME, 'li')
-                for jugador in jugadores_transferidos:
-                    jugadorH3 = jugador.find_element(By.TAG_NAME, "h3")
-                    fichajeName = jugadorH3.find_element(By.TAG_NAME, "a").text.strip()
-                    valorVentaStr = jugador.find_element(By.TAG_NAME, 'strong').text.strip()
-                    valor_limpio = valorVentaStr.replace('.', '').replace('€', '').replace(' ', '')
-                    valorVenta = int(valor_limpio)
-                    print(f"      - {fichajeName} vendido por {valorVenta} €")
+                try:
+                    print(f"\n📌 Post {i}:")
+                    userName = get_user_name(post)
+                    userName = analize_user_name(userName)
+                    print(f"   - {h3_element.text.strip()} de {userName} ({date_str})")
+                    content_transfer_div = post.find_element(By.CSS_SELECTOR, "div.content.transfer")
+                    jugadores_transferidos = content_transfer_div.find_elements(By.TAG_NAME, 'li')
+                    for jugador in jugadores_transferidos:
+                        jugadorH3 = jugador.find_element(By.TAG_NAME, "h3")
+                        fichajeName = jugadorH3.find_element(By.TAG_NAME, "a").text.strip()
+                        valorVentaStr = jugador.find_element(By.TAG_NAME, 'strong').text.strip()
+                        valor_limpio = valorVentaStr.replace('.', '').replace('€', '').replace(' ', '')
+                        valorVenta = int(valor_limpio)
+                        print(f"      - {fichajeName} vendido por {valorVenta} €")
+                except Exception as e:
+                    print(f"   ⚠️ Excepcion en FICHAJES: {e}")
             elif cardName == 'CAMBIO DE NOMBRE':
                 print(f"\n📌 Post {i}:")
                 print(f"   - {h3_element.text.strip()}")
@@ -183,3 +213,50 @@ def mostrar_texto_h3(posts):
 
         except Exception as e:
             print(f"   ⚠️ No se pudo encontrar el h3 esperado: {e}")
+
+def get_user_name(post):
+    try:
+        header_div = post.find_element(By.CSS_SELECTOR, "div.header.ng-star-inserted")
+        userlink = header_div.find_element(By.TAG_NAME, 'user-link')
+        userName = userlink.find_element(By.TAG_NAME, 'a').text.strip()
+    except Exception as e:
+        userName = []
+        content_transfer_div = post.find_element(By.CSS_SELECTOR, "div.content.transfer")
+        jugadores_transferidos = content_transfer_div.find_elements(By.TAG_NAME, 'li')
+        for jugador in jugadores_transferidos:
+            from_to_div = jugador.find_element(By.CSS_SELECTOR, "div.from-to")
+            userlinks = from_to_div.find_elements(By.TAG_NAME, 'user-link')
+            if len(userlinks) == 2:
+                name1 = userlinks[0].find_element(By.TAG_NAME, 'a').text.strip()
+                name2 = userlinks[1].find_element(By.TAG_NAME, 'a').text.strip()
+                userName.append(name1 + '-->' + name2)
+            elif len(userlinks) == 1:
+                name1 = userlinks[0].find_element(By.TAG_NAME, 'a').text.strip()
+                userName.append(name1 + '-->Mercado')
+    return userName
+
+def analize_user_name(userName):
+    userToRet = ''
+    if isinstance(userName, list):
+        print("x es una lista")
+        listaUsuarios = []
+        for movement in userName:
+            partes = movement.split("-->")
+            listaUsuarios.append(partes[0])
+            listaUsuarios.append(partes[1])
+        userToRet = get_user_repited(listaUsuarios)
+    else:
+        userToRet = userName
+
+    return userToRet
+
+def get_user_repited(listNames):
+    # Contamos las ocurrencias
+    conteo = Counter(listNames)
+    # Eliminamos la clave 'Mercado' si existe
+    conteo.pop("Mercado", None)
+    # Obtenemos el string con más ocurrencias
+    if conteo:
+        return conteo.most_common(1)[0][0]
+    else:
+        return None  # Por si el array está vacío o solo tenía "Mercado"
