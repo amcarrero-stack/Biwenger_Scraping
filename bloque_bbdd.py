@@ -1,5 +1,10 @@
 import sqlite3
 from pathlib import Path
+from datetime import datetime
+import locale
+
+# Asegúrate de establecer el locale en español para los nombres de los meses
+locale.setlocale(locale.LC_TIME, 'es_ES.UTF-8')  # En Windows puede ser 'Spanish_Spain'
 
 RUTA_BASE = Path(__file__).parent
 DB_PATH = RUTA_BASE / "BBDD" / "biwenger.db"
@@ -70,3 +75,39 @@ def print_usuarios(usuarios):
 
 def cerrar_BBDD(conn):
     conn.close()
+
+def actualizar_saldos(conn, movimientos):
+    """
+    Actualiza el saldo y modificationDate de cada usuario según los movimientos.
+
+    :param conn: conexión a la base de datos SQLite.
+    :param movimientos: lista de diccionarios con username, compras y ventas.
+    """
+    cursor = conn.cursor()
+
+    # Obtener la fecha actual en formato "5 ago 2025"
+    fecha_actual = datetime.now().strftime('%-d %b %Y')  # En Windows puede requerir '%#d %b %Y'
+
+    for mov in movimientos:
+        username = mov['username']
+        compras = mov.get('compras', 0)
+        ventas = mov.get('ventas', 0)
+
+        # Obtener el saldo actual
+        cursor.execute("SELECT saldo FROM usuarios WHERE name = ?", (username,))
+        resultado = cursor.fetchone()
+
+        if resultado:
+            saldo_actual = resultado[0]
+            saldo_nuevo = saldo_actual - compras + ventas
+
+            # Actualizar saldo y fecha
+            cursor.execute(
+                "UPDATE usuarios SET saldo = ?, modificationDate = ? WHERE name = ?",
+                (saldo_nuevo, fecha_actual, username)
+            )
+        else:
+            print(f"⚠️ Usuario '{username}' no encontrado en la tabla usuarios.")
+
+    conn.commit()
+    print("✅ Saldos y fechas actualizados correctamente.")

@@ -1,5 +1,6 @@
 from config import URL_BIWENGER_HOME, NOMBRE_MI_EQUIPO, URL_BIWENGER_LIGA
 import time
+import locale
 from selenium.webdriver.common.by import By
 from datetime import datetime, date
 from collections import Counter
@@ -53,6 +54,7 @@ def do_obtener_usuarios(driver):
     return usuarios
 
 def get_posts_until_date(driver, modification_date):
+    locale.setlocale(locale.LC_TIME, "C")
     print('entra en get_posts_until_date')
     driver.get(URL_BIWENGER_HOME)
     fecha_str_traducida = traducir_mes(modification_date)
@@ -125,7 +127,7 @@ def check_league_board_post(league_board_post):
         header_div = league_board_post.find_element(By.CSS_SELECTOR, "div.header.ng-star-inserted")
         h3_element = header_div.find_element(By.TAG_NAME, "h3")
         cardName = h3_element.text.strip()
-        return cardName == 'MERCADO DE FICHAJES' or cardName == 'FICHAJES' or cardName == 'CAMBIO DE NOMBRE'
+        return cardName == 'MERCADO DE FICHAJES' or cardName == 'FICHAJES' or cardName == 'CAMBIO DE NOMBRE' or cardName == 'CLÁUSULAS'
     except Exception as e:
         print(f"   ⚠️ No se pudo encontrar el h3 esperado: {e}")
 
@@ -167,7 +169,7 @@ def mostrar_texto_h3(posts):
             elif cardName == 'FICHAJES':
                 try:
                     print(f"\n📌 Post {i}:")
-                    userName = get_user_name(post)
+                    userName = get_user_name_fichajes(post)
                     userName = analize_user_name(userName)
                     print(f"   - {h3_element.text.strip()} de {userName} ({date_str})")
                     content_transfer_div = post.find_element(By.CSS_SELECTOR, "div.content.transfer")
@@ -190,11 +192,103 @@ def mostrar_texto_h3(posts):
                 userNameOld = userlink.find_element(By.TAG_NAME, 'a').text.strip()
                 userNameNew = cambioUsuarioLi.find_element(By.TAG_NAME, 'strong').text.strip()
                 print(f"      - {userNameOld} ha cambiado su nombre a {userNameNew}")
+            elif cardName == 'CLÁUSULAS':
+                try:
+                    print(f"\n📌 Post {i}:")
+                    content_transfer_div = post.find_element(By.CSS_SELECTOR, "div.content.transfer")
+                    jugadores_transferidos = content_transfer_div.find_elements(By.TAG_NAME, 'li')
+                    for jugador in jugadores_transferidos:
+                        jugadorH3 = jugador.find_element(By.TAG_NAME, "h3")
+                        fichajeName = jugadorH3.find_element(By.TAG_NAME, "a").text.strip()
+                        userNames = get_user_name_clausulas(post)
+                        userNameVenta = userNames[0]
+                        userNameCompra = userNames[1]
+                        valorVentaStr = jugador.find_element(By.TAG_NAME, 'strong').text.strip()
+                        valor_limpio = valorVentaStr.replace('.', '').replace('€', '').replace(' ', '')
+                        valor = int(valor_limpio)
+                        print(f"      - {userNameCompra} ha pagado la clausula de {fichajeName} a {userNameVenta} por {valor} €")
+
+                except Exception as e:
+                    print(f"   ⚠️ Excepcion en FICHAJES: {e}")
 
         except Exception as e:
             print(f"   ⚠️ No se pudo encontrar el h3 esperado: {e}")
 
-def get_user_name(post):
+def obtener_ventas_y_compras(posts):
+    resumen_usuarios = {}
+
+    for i, post in enumerate(posts, start=1):
+        try:
+            header_div = post.find_element(By.CSS_SELECTOR, "div.header.ng-star-inserted")
+            h3_element = header_div.find_element(By.TAG_NAME, "h3")
+            date_elem = header_div.find_element(By.CSS_SELECTOR, "div.date")
+            date_str = date_elem.get_attribute("title").split(',')[0]
+
+            cardName = h3_element.text.strip()
+
+            if cardName == 'MERCADO DE FICHAJES':
+                merc_fichajes_div = post.find_element(By.CSS_SELECTOR, "div.content.market")
+                fichajes = merc_fichajes_div.find_elements(By.TAG_NAME, 'li')
+                for fichaje in fichajes:
+                    fichajeName = fichaje.find_element(By.TAG_NAME, "h3").text.strip()
+                    userlink = fichaje.find_element(By.TAG_NAME, 'user-link')
+                    userName = userlink.find_element(By.TAG_NAME, 'a').text.strip()
+                    valorCompraStr = fichaje.find_element(By.TAG_NAME, 'strong').text.strip()
+                    valor_limpio = valorCompraStr.replace('.', '').replace('€', '').replace(' ', '')
+                    valorCompra = int(valor_limpio)
+
+                    if userName not in resumen_usuarios:
+                        resumen_usuarios[userName] = {"username": userName, "compras": 0, "ventas": 0}
+                    resumen_usuarios[userName]["compras"] += valorCompra
+
+            elif cardName == 'FICHAJES':
+                try:
+                    userName = get_user_name_fichajes(post)
+                    userName = analize_user_name(userName)
+                    content_transfer_div = post.find_element(By.CSS_SELECTOR, "div.content.transfer")
+                    jugadores_transferidos = content_transfer_div.find_elements(By.TAG_NAME, 'li')
+                    for jugador in jugadores_transferidos:
+                        jugadorH3 = jugador.find_element(By.TAG_NAME, "h3")
+                        fichajeName = jugadorH3.find_element(By.TAG_NAME, "a").text.strip()
+                        valorVentaStr = jugador.find_element(By.TAG_NAME, 'strong').text.strip()
+                        valor_limpio = valorVentaStr.replace('.', '').replace('€', '').replace(' ', '')
+                        valorVenta = int(valor_limpio)
+
+                        if userName not in resumen_usuarios:
+                            resumen_usuarios[userName] = {"username": userName, "compras": 0, "ventas": 0}
+                        resumen_usuarios[userName]["ventas"] += valorVenta
+
+                except Exception as e:
+                    print(f"   ⚠️ Excepcion en FICHAJES: {e}")
+            elif cardName == 'CLÁUSULAS':
+                try:
+                    content_transfer_div = post.find_element(By.CSS_SELECTOR, "div.content.transfer")
+                    jugadores_transferidos = content_transfer_div.find_elements(By.TAG_NAME, 'li')
+                    for jugador in jugadores_transferidos:
+                        userNames = get_user_name_clausulas(post)
+                        userNameVenta = userNames[0]
+                        userNameCompra = userNames[1]
+                        valorVentaStr = jugador.find_element(By.TAG_NAME, 'strong').text.strip()
+                        valor_limpio = valorVentaStr.replace('.', '').replace('€', '').replace(' ', '')
+                        valor = int(valor_limpio)
+
+                        if userNameVenta not in resumen_usuarios:
+                            resumen_usuarios[userNameVenta] = {"username": userNameVenta, "compras": 0, "ventas": 0}
+                        resumen_usuarios[userNameVenta]["ventas"] += valor
+                        if userNameCompra not in resumen_usuarios:
+                            resumen_usuarios[userNameCompra] = {"username": userNameCompra, "compras": 0, "ventas": 0}
+                        resumen_usuarios[userNameCompra]["compras"] += valor
+
+                except Exception as e:
+                    print(f"   ⚠️ Excepcion en FICHAJES: {e}")
+
+        except Exception as e:
+            print(f"   ⚠️ No se pudo procesar post {i}: {e}")
+
+    return list(resumen_usuarios.values())
+
+
+def get_user_name_fichajes(post):
     try:
         header_div = post.find_element(By.CSS_SELECTOR, "div.header.ng-star-inserted")
         userlink = header_div.find_element(By.TAG_NAME, 'user-link')
@@ -214,6 +308,22 @@ def get_user_name(post):
                 name1 = userlinks[0].find_element(By.TAG_NAME, 'a').text.strip()
                 userName.append(name1 + '-->Mercado')
     return userName
+
+def get_user_name_clausulas(post):
+    try:
+        userNames = []
+        content_transfer_div = post.find_element(By.CSS_SELECTOR, "div.content.transfer")
+        jugadores_transferidos = content_transfer_div.find_elements(By.TAG_NAME, 'li')
+        for jugador in jugadores_transferidos:
+            from_to_div = jugador.find_element(By.CSS_SELECTOR, "div.from-to")
+            userlinks = from_to_div.find_elements(By.TAG_NAME, 'user-link')
+            userNameVenta = userlinks[0].find_element(By.TAG_NAME, 'a').text.strip()
+            userNameCompra = userlinks[1].find_element(By.TAG_NAME, 'a').text.strip()
+            userNames.append(userNameVenta)
+            userNames.append(userNameCompra)
+    except Exception as e:
+        print(f"   ⚠️ Excepcion en get_user_name_clausulas: {e}")
+    return userNames
 
 def analize_user_name(userName):
     userToRet = ''

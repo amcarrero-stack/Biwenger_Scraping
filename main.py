@@ -3,15 +3,10 @@ from datetime import datetime, timedelta
 
 from config import URL_BIWENGER_HOME, NOMBRE_MI_EQUIPO, URL_BIWENGER_LIGA
 from utils import log_message, crear_driver
-from bloque_1_selenium import get_posts_until_date, mostrar_texto_h3
+from bloque_1_selenium import get_posts_until_date, mostrar_texto_h3, obtener_ventas_y_compras
 from bloque_1_selenium import do_login, do_obtener_usuarios
-from bloque_bbdd import get_db_connection, crear_tablas_si_no_existen, cerrar_BBDD, insertar_usuario, obtener_usuarios, print_usuarios
-from bloque_2_scraping_movimientos import extraer_movimientos
-from bloque_4_excel_update import cargar_o_crear_excel, actualizar_datos_excel
-from bloque_5_generar_html import generar_html
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
+from bloque_bbdd import get_db_connection, crear_tablas_si_no_existen, cerrar_BBDD, insertar_usuario, obtener_usuarios, print_usuarios, actualizar_saldos
+import traceback
 
 def main():
     log_message("=== Inicio ejecución script Biwenger ===")
@@ -31,13 +26,16 @@ def main():
         if not usuarios_db:
             insertar_usuario(conn, usuarios_actuales)
             usuarios_db = obtener_usuarios(conn)
-        modification_date = usuarios_db[0][5]
+        modification_date = str(usuarios_db[0][5]).strip()
         print(f'modification_date es {modification_date}')
         print_usuarios(obtener_usuarios(conn))
         cerrar_BBDD(conn)
         posts = get_posts_until_date(driver, modification_date)
         print(f"Se han recogido {len(posts)} movimientos hasta {modification_date}")
         mostrar_texto_h3(posts)
+        compras_y_ventas = obtener_ventas_y_compras(posts)
+        print(compras_y_ventas)
+        # actualizar_saldos(conn, compras_y_ventas)
 
 
 
@@ -70,6 +68,7 @@ def main():
 
     except Exception as e:
         log_message(f"❌ Error durante la ejecución: {e}")
+        traceback.print_exc()
 
     finally:
         if 'driver' in locals():
