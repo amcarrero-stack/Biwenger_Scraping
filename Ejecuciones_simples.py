@@ -8,8 +8,8 @@ conn = get_db_connection()
 borrar_todos_los_usuarios(conn)
 # print_usuarios(obtener_usuarios(conn))
 
-locale.setlocale(locale.LC_TIME, "C")  # Fuerza el formato inglés estándar
-#
-modification_date = '1 Aug 2025'
-cutoff_datetime = datetime.strptime(modification_date, "%d %b %Y")
-print(cutoff_datetime)
+# locale.setlocale(locale.LC_TIME, "C")  # Fuerza el formato inglés estándar
+# #
+# modification_date = '1 Aug 2025'
+# cutoff_datetime = datetime.strptime(modification_date, "%d %b %Y")
+# print(cutoff_datetime)

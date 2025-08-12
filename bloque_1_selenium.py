@@ -118,7 +118,7 @@ def cleanPosts(all_posts):
             else:
                 postToRet.append(post)
         except Exception as e:
-            print(f"⚠️ Excepcion en cleanPosts: {e.__str__()}")
+            print(f"⚠️ Excepcion en cleanPosts")
 
     return postToRet
 
@@ -129,7 +129,7 @@ def check_league_board_post(league_board_post):
         cardName = h3_element.text.strip()
         return cardName == 'MERCADO DE FICHAJES' or cardName == 'FICHAJES' or cardName == 'CAMBIO DE NOMBRE' or cardName == 'CLÁUSULAS'
     except Exception as e:
-        print(f"   ⚠️ No se pudo encontrar el h3 esperado: {e}")
+        print(f"⚠️ No se pudo encontrar el h3 esperado")
 
 def traducir_mes(mes_es):
     traducciones = {
@@ -169,18 +169,32 @@ def mostrar_texto_h3(posts):
             elif cardName == 'FICHAJES':
                 try:
                     print(f"\n📌 Post {i}:")
-                    userName = get_user_name_fichajes(post)
-                    userName = analize_user_name(userName)
-                    print(f"   - {h3_element.text.strip()} de {userName} ({date_str})")
-                    content_transfer_div = post.find_element(By.CSS_SELECTOR, "div.content.transfer")
-                    jugadores_transferidos = content_transfer_div.find_elements(By.TAG_NAME, 'li')
-                    for jugador in jugadores_transferidos:
-                        jugadorH3 = jugador.find_element(By.TAG_NAME, "h3")
-                        fichajeName = jugadorH3.find_element(By.TAG_NAME, "a").text.strip()
-                        valorVentaStr = jugador.find_element(By.TAG_NAME, 'strong').text.strip()
-                        valor_limpio = valorVentaStr.replace('.', '').replace('€', '').replace(' ', '')
-                        valorVenta = int(valor_limpio)
-                        print(f"      - {fichajeName} vendido por {valorVenta} €")
+                    print(f"   - {h3_element.text.strip()} ({date_str})")
+                    if has_header_name(post):
+                        userName = get_header_name(post)
+                        content_transfer_div = post.find_element(By.CSS_SELECTOR, "div.content.transfer")
+                        jugadores_transferidos = content_transfer_div.find_elements(By.TAG_NAME, 'li')
+                        for jugador in jugadores_transferidos:
+                            jugadorH3 = jugador.find_element(By.TAG_NAME, "h3")
+                            jugadorName = jugadorH3.text.strip()
+                            valorVentaStr = jugador.find_element(By.TAG_NAME, 'strong').text.strip()
+                            valor_limpio = valorVentaStr.replace('.', '').replace('€', '').replace(' ', '')
+                            valorVenta = int(valor_limpio)
+                            print(f"      - {jugadorName}: Vendido por {userName} a Mercado por {valorVenta} €")
+                    else:
+                        content_transfer_div = post.find_element(By.CSS_SELECTOR, "div.content.transfer")
+                        jugadores_transferidos = content_transfer_div.find_elements(By.TAG_NAME, 'li')
+                        for jugador in jugadores_transferidos:
+                            jugadorH3 = jugador.find_element(By.TAG_NAME, "h3")
+                            jugadorName = jugadorH3.text.strip()
+                            userNames = get_user_name_fichajes(jugador)
+                            userNameVenta = userNames[0]
+                            userNameCompra = userNames[1]
+                            valorVentaStr = jugador.find_element(By.TAG_NAME, 'strong').text.strip()
+                            valor_limpio = valorVentaStr.replace('.', '').replace('€', '').replace(' ', '')
+                            valor = int(valor_limpio)
+                            print(f"      - {jugadorName}: Vendido por {userNameVenta} a {userNameCompra} por {valor} €")
+
                 except Exception as e:
                     print(f"   ⚠️ Excepcion en FICHAJES: {e}")
             elif cardName == 'CAMBIO DE NOMBRE':
@@ -243,21 +257,37 @@ def obtener_ventas_y_compras(posts):
 
             elif cardName == 'FICHAJES':
                 try:
-                    userName = get_user_name_fichajes(post)
-                    userName = analize_user_name(userName)
-                    content_transfer_div = post.find_element(By.CSS_SELECTOR, "div.content.transfer")
-                    jugadores_transferidos = content_transfer_div.find_elements(By.TAG_NAME, 'li')
-                    for jugador in jugadores_transferidos:
-                        jugadorH3 = jugador.find_element(By.TAG_NAME, "h3")
-                        fichajeName = jugadorH3.find_element(By.TAG_NAME, "a").text.strip()
-                        valorVentaStr = jugador.find_element(By.TAG_NAME, 'strong').text.strip()
-                        valor_limpio = valorVentaStr.replace('.', '').replace('€', '').replace(' ', '')
-                        valorVenta = int(valor_limpio)
+                    if has_header_name(post):
+                        userName = get_header_name(post)
+                        content_transfer_div = post.find_element(By.CSS_SELECTOR, "div.content.transfer")
+                        jugadores_transferidos = content_transfer_div.find_elements(By.TAG_NAME, 'li')
+                        for jugador in jugadores_transferidos:
+                            valorVentaStr = jugador.find_element(By.TAG_NAME, 'strong').text.strip()
+                            valor_limpio = valorVentaStr.replace('.', '').replace('€', '').replace(' ', '')
+                            valorVenta = int(valor_limpio)
 
-                        if userName not in resumen_usuarios:
-                            resumen_usuarios[userName] = {"username": userName, "compras": 0, "ventas": 0}
-                        resumen_usuarios[userName]["ventas"] += valorVenta
+                            if userName not in resumen_usuarios:
+                                resumen_usuarios[userName] = {"username": userName, "compras": 0, "ventas": 0}
+                            resumen_usuarios[userName]["ventas"] += valorVenta
+                    else:
+                        content_transfer_div = post.find_element(By.CSS_SELECTOR, "div.content.transfer")
+                        jugadores_transferidos = content_transfer_div.find_elements(By.TAG_NAME, 'li')
+                        for jugador in jugadores_transferidos:
+                            userNames = get_user_name_fichajes(jugador)
+                            userNameVenta = userNames[0]
+                            userNameCompra = userNames[1]
+                            valorVentaStr = jugador.find_element(By.TAG_NAME, 'strong').text.strip()
+                            valor_limpio = valorVentaStr.replace('.', '').replace('€', '').replace(' ', '')
+                            valor = int(valor_limpio)
 
+                            if userNameVenta not in resumen_usuarios:
+                                resumen_usuarios[userNameVenta] = {"username": userNameVenta, "compras": 0, "ventas": 0}
+                            resumen_usuarios[userNameVenta]["ventas"] += valor
+
+                            if userNameCompra.lower() != 'mercado':
+                                if userNameCompra not in resumen_usuarios:
+                                    resumen_usuarios[userNameCompra] = {"username": userNameCompra, "compras": 0, "ventas": 0}
+                                resumen_usuarios[userNameCompra]["compras"] += valor
                 except Exception as e:
                     print(f"   ⚠️ Excepcion en FICHAJES: {e}")
             elif cardName == 'CLÁUSULAS':
@@ -287,27 +317,39 @@ def obtener_ventas_y_compras(posts):
 
     return list(resumen_usuarios.values())
 
-
-def get_user_name_fichajes(post):
+def has_header_name(post):
+    hasHeaderName = True
     try:
         header_div = post.find_element(By.CSS_SELECTOR, "div.header.ng-star-inserted")
         userlink = header_div.find_element(By.TAG_NAME, 'user-link')
-        userName = userlink.find_element(By.TAG_NAME, 'a').text.strip()
+        userlink.find_element(By.TAG_NAME, 'a').text.strip()
     except Exception as e:
-        userName = []
-        content_transfer_div = post.find_element(By.CSS_SELECTOR, "div.content.transfer")
-        jugadores_transferidos = content_transfer_div.find_elements(By.TAG_NAME, 'li')
-        for jugador in jugadores_transferidos:
-            from_to_div = jugador.find_element(By.CSS_SELECTOR, "div.from-to")
-            userlinks = from_to_div.find_elements(By.TAG_NAME, 'user-link')
-            if len(userlinks) == 2:
-                name1 = userlinks[0].find_element(By.TAG_NAME, 'a').text.strip()
-                name2 = userlinks[1].find_element(By.TAG_NAME, 'a').text.strip()
-                userName.append(name1 + '-->' + name2)
-            elif len(userlinks) == 1:
-                name1 = userlinks[0].find_element(By.TAG_NAME, 'a').text.strip()
-                userName.append(name1 + '-->Mercado')
-    return userName
+        hasHeaderName = False
+    return hasHeaderName
+
+def get_header_name(post):
+    header_div = post.find_element(By.CSS_SELECTOR, "div.header.ng-star-inserted")
+    userlink = header_div.find_element(By.TAG_NAME, 'user-link')
+    return userlink.find_element(By.TAG_NAME, 'a').text.strip()
+
+def get_user_name_fichajes(jugador):
+    try:
+        userNames = []
+        from_to_div = jugador.find_element(By.CSS_SELECTOR, "div.from-to")
+        userlinks = from_to_div.find_elements(By.TAG_NAME, 'user-link')
+        if len(userlinks) == 2:
+            name1 = userlinks[0].find_element(By.TAG_NAME, 'a').text.strip()
+            name2 = userlinks[1].find_element(By.TAG_NAME, 'a').text.strip()
+            userNames.append(name1)
+            userNames.append(name2)
+        elif len(userlinks) == 1:
+            name1 = userlinks[0].find_element(By.TAG_NAME, 'a').text.strip()
+            name2 = from_to_div.find_element(By.TAG_NAME, 'em').text.strip()
+            userNames.append(name1)
+            userNames.append(name2)
+    except Exception as e:
+        print(f"   ⚠️ Excepcion en get_user_name_fichajes: {e}")
+    return userNames
 
 def get_user_name_clausulas(post):
     try:
