@@ -7,7 +7,7 @@ from collections import Counter
 
 def do_login(driver):
     driver.get(URL_BIWENGER_HOME)
-    time.sleep(3)  # Esperar a que cargue del todo
+    time.sleep(3)  # Esperar a que cargue
     web_element_agree = driver.find_elements(By.ID, 'didomi-notice-agree-button')[0]
     web_element_agree.click()
 
@@ -127,7 +127,7 @@ def check_league_board_post(league_board_post):
         header_div = league_board_post.find_element(By.CSS_SELECTOR, "div.header.ng-star-inserted")
         h3_element = header_div.find_element(By.TAG_NAME, "h3")
         cardName = h3_element.text.strip()
-        return cardName == 'MERCADO DE FICHAJES' or cardName == 'FICHAJES' or cardName == 'CAMBIO DE NOMBRE' or cardName == 'CLÁUSULAS'
+        return cardName == 'MERCADO DE FICHAJES' or cardName == 'FICHAJES' or cardName == 'CAMBIO DE NOMBRE' or cardName == 'CLÁUSULAS' or cardName == 'ABONOS Y PENALIZACIONES'
     except Exception as e:
         print(f"⚠️ No se pudo encontrar el h3 esperado")
 
@@ -224,7 +224,21 @@ def mostrar_texto_h3(posts):
 
                 except Exception as e:
                     print(f"   ⚠️ Excepcion en FICHAJES: {e}")
-
+            elif cardName == 'ABONOS Y PENALIZACIONES':
+                try:
+                    print(f"\n📌 Post {i}:")
+                    print(f"   - {h3_element.text.strip()}")
+                    content_bonus_div = post.find_element(By.CSS_SELECTOR, "div.content.bonus")
+                    penalizaciones = content_bonus_div.find_elements(By.TAG_NAME, 'tr')
+                    for penalizacion in penalizaciones:
+                        userlink = penalizacion.find_element(By.TAG_NAME, 'user-link')
+                        userName = userlink.find_element(By.TAG_NAME, 'a').text.strip()
+                        decrement = post.find_element(By.CSS_SELECTOR, "increment.decrement.icon.icon-decrement").text.strip()
+                        valor_limpio = decrement.replace('.', '').replace('€', '').replace(' ', '')
+                        valor = int(valor_limpio)
+                        print(f"      - {userName} ha sido penalizado por el administrador con {valor} €")
+                except Exception as e:
+                    print(f"   ⚠️ Excepcion en FICHAJES: {e}")
         except Exception as e:
             print(f"   ⚠️ No se pudo encontrar el h3 esperado: {e}")
 
@@ -244,7 +258,6 @@ def obtener_ventas_y_compras(posts):
                 merc_fichajes_div = post.find_element(By.CSS_SELECTOR, "div.content.market")
                 fichajes = merc_fichajes_div.find_elements(By.TAG_NAME, 'li')
                 for fichaje in fichajes:
-                    fichajeName = fichaje.find_element(By.TAG_NAME, "h3").text.strip()
                     userlink = fichaje.find_element(By.TAG_NAME, 'user-link')
                     userName = userlink.find_element(By.TAG_NAME, 'a').text.strip()
                     valorCompraStr = fichaje.find_element(By.TAG_NAME, 'strong').text.strip()
@@ -252,7 +265,7 @@ def obtener_ventas_y_compras(posts):
                     valorCompra = int(valor_limpio)
 
                     if userName not in resumen_usuarios:
-                        resumen_usuarios[userName] = {"username": userName, "compras": 0, "ventas": 0}
+                        resumen_usuarios[userName] = {"username": userName, "compras": 0, "ventas": 0, "penalizaciones": 0}
                     resumen_usuarios[userName]["compras"] += valorCompra
 
             elif cardName == 'FICHAJES':
@@ -267,7 +280,7 @@ def obtener_ventas_y_compras(posts):
                             valorVenta = int(valor_limpio)
 
                             if userName not in resumen_usuarios:
-                                resumen_usuarios[userName] = {"username": userName, "compras": 0, "ventas": 0}
+                                resumen_usuarios[userName] = {"username": userName, "compras": 0, "ventas": 0, "penalizaciones": 0}
                             resumen_usuarios[userName]["ventas"] += valorVenta
                     else:
                         content_transfer_div = post.find_element(By.CSS_SELECTOR, "div.content.transfer")
@@ -281,12 +294,12 @@ def obtener_ventas_y_compras(posts):
                             valor = int(valor_limpio)
 
                             if userNameVenta not in resumen_usuarios:
-                                resumen_usuarios[userNameVenta] = {"username": userNameVenta, "compras": 0, "ventas": 0}
+                                resumen_usuarios[userNameVenta] = {"username": userNameVenta, "compras": 0, "ventas": 0, "penalizaciones": 0}
                             resumen_usuarios[userNameVenta]["ventas"] += valor
 
                             if userNameCompra.lower() != 'mercado':
                                 if userNameCompra not in resumen_usuarios:
-                                    resumen_usuarios[userNameCompra] = {"username": userNameCompra, "compras": 0, "ventas": 0}
+                                    resumen_usuarios[userNameCompra] = {"username": userNameCompra, "compras": 0, "ventas": 0, "penalizaciones": 0}
                                 resumen_usuarios[userNameCompra]["compras"] += valor
                 except Exception as e:
                     print(f"   ⚠️ Excepcion en FICHAJES: {e}")
@@ -303,12 +316,28 @@ def obtener_ventas_y_compras(posts):
                         valor = int(valor_limpio)
 
                         if userNameVenta not in resumen_usuarios:
-                            resumen_usuarios[userNameVenta] = {"username": userNameVenta, "compras": 0, "ventas": 0}
+                            resumen_usuarios[userNameVenta] = {"username": userNameVenta, "compras": 0, "ventas": 0, "penalizaciones": 0}
                         resumen_usuarios[userNameVenta]["ventas"] += valor
                         if userNameCompra not in resumen_usuarios:
-                            resumen_usuarios[userNameCompra] = {"username": userNameCompra, "compras": 0, "ventas": 0}
+                            resumen_usuarios[userNameCompra] = {"username": userNameCompra, "compras": 0, "ventas": 0, "penalizaciones": 0}
                         resumen_usuarios[userNameCompra]["compras"] += valor
 
+                except Exception as e:
+                    print(f"   ⚠️ Excepcion en FICHAJES: {e}")
+
+            elif cardName == 'ABONOS Y PENALIZACIONES':
+                try:
+                    content_bonus_div = post.find_element(By.CSS_SELECTOR, "div.content.bonus")
+                    penalizaciones = content_bonus_div.find_elements(By.TAG_NAME, 'tr')
+                    for penalizacion in penalizaciones:
+                        userlink = penalizacion.find_element(By.TAG_NAME, 'user-link')
+                        userName = userlink.find_element(By.TAG_NAME, 'a').text.strip()
+                        decrement = post.find_element(By.CSS_SELECTOR, "increment.decrement.icon.icon-decrement").text.strip()
+                        valor_limpio = decrement.replace('.', '').replace('€', '').replace(' ', '')
+                        valor = int(valor_limpio)
+                        if userName not in resumen_usuarios:
+                            resumen_usuarios[userName] = {"username": userName, "compras": 0, "ventas": 0, "penalizaciones": 0}
+                        resumen_usuarios[userName]["penalizaciones"] += valor
                 except Exception as e:
                     print(f"   ⚠️ Excepcion en FICHAJES: {e}")
 
