@@ -1,5 +1,5 @@
 from collections import Counter
-from bloque_bbdd import get_db_connection, crear_tablas_si_no_existen, cerrar_BBDD, insertar_usuarios, obtener_usuarios, print_usuarios, borrar_todos_los_usuarios, actualizar_varios
+from bloque_bbdd import get_db_connection, crear_tablas_si_no_existen, cerrar_BBDD, insertar_usuarios, obtener_userinfo_bbdd, print_usuarios, borrar_todos_los_usuarios, actualizar_varios,insertar_varios,borrar_todos_los_movimientos
 import locale
 from datetime import datetime, date
 
@@ -8,10 +8,15 @@ from datetime import datetime, date
 # crear_tablas_si_no_existen(conn)
 
 
-# Borrar usuarios
+# BORRAR USUARIOS
 conn = get_db_connection()
 borrar_todos_los_usuarios(conn)
-# print_usuarios(obtener_usuarios(conn))
+# print_usuarios(obtener_userinfo_bbdd(conn))
+
+# BORRAR MOVIMIENTOS
+conn = get_db_connection()
+borrar_todos_los_movimientos(conn)
+
 
 # locale.setlocale(locale.LC_TIME, "C")  # Fuerza el formato inglés estándar
 # #
@@ -25,7 +30,7 @@ borrar_todos_los_usuarios(conn)
 #
 # print(fecha_formateada)
 
-# Actualizar datos de la tabla
+# ACTUALIZAR DATOS DE LA TABLA
 # conn = get_db_connection()
 # actualizar_varios(
 #     conn,
@@ -43,3 +48,10 @@ borrar_todos_los_usuarios(conn)
 # )
 # cerrar_BBDD(conn)
 
+# INSERTA DATOS EN UNA TABLA
+# movimientos_realizados = [
+#     {"usuario_id": "8", "tipo":"fichaje", "jugador": "Tullido", "cantidad": 200000, "fecha":"13 ago 2025"},
+#     {"usuario_id": "12", "tipo": "venta", "jugador": "Mbappe", "cantidad": -20000000, "fecha": "13 ago 2025"},
+#     {"usuario_id": "13", "tipo":"clausulazo", "jugador": "Vinicius", "cantidad": 15000000, "fecha":"13 ago 2025"},
+# ]
+# insertar_varios("movimientos", movimientos_realizados)

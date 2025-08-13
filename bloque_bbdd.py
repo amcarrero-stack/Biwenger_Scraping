@@ -17,25 +17,26 @@ def get_db_connection():
 
 def crear_tablas_si_no_existen(conn):
     cursor = conn.cursor()
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS usuarios (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT UNIQUE NOT NULL,
-            url_name TEXT UNIQUE NOT NULL,
-            saldo INTEGER NOT NULL,
-            num_jugadores INTEGER,
-            modificationDate TEXT
-        )
-    ''')
+    # cursor.execute('''
+    #     CREATE TABLE IF NOT EXISTS usuarios (
+    #         id INTEGER PRIMARY KEY AUTOINCREMENT,
+    #         name TEXT UNIQUE NOT NULL,
+    #         url_name TEXT UNIQUE NOT NULL,
+    #         saldo INTEGER NOT NULL,
+    #         num_jugadores INTEGER,
+    #         modificationDate TEXT
+    #     )
+    # ''')
 
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS movimientos (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            usuario TEXT NOT NULL,
-            tipo TEXT CHECK(tipo IN ('fichaje', 'venta')),
+            usuario_id INTEGER NOT NULL,
+            tipo TEXT CHECK(tipo IN ('fichaje', 'venta', 'clausulazo', 'abono', 'penalizacion')),
             jugador TEXT,
             cantidad REAL,
-            fecha TEXT
+            fecha TEXT,
+            FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
         )
     ''')
     conn.commit()
@@ -57,17 +58,40 @@ def insertar_usuarios(conn, usuarios):
     conn.commit()
 
 def borrar_todos_los_usuarios(conn):
-    cursor = conn.cursor()
-    cursor.execute("DELETE FROM usuarios")
-    conn.commit()
-    print("Todos los usuarios han sido eliminados.")
+    try:
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM usuarios")
+        conn.commit()
+        print("Todos los usuarios han sido eliminados.")
+    except Exception as e:
+        print(f"Error al borrar los usuarios {e}")
+
+
+def borrar_todos_los_movimientos(conn):
+    try:
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM movimientos")
+        conn.commit()
+        print("Todos los movimientos han sido eliminados.")
+    except Exception as e:
+        print(f"Error al borrar los movimientos {e}")
 
 # Consultar usuarios
-def obtener_usuarios(conn):
+def obtener_userinfo_bbdd(conn):
     cursor = conn.cursor()
     cursor.execute("SELECT id, name, saldo, url_name, num_jugadores, modificationDate FROM usuarios")
     usuarios = cursor.fetchall()
     return usuarios
+
+
+def obtener_userId(conn):
+    cursor = conn.cursor()
+    cursor.execute("SELECT id, name FROM usuarios")
+    usuarios = cursor.fetchall()
+
+    # Crear diccionario: key = name, value = id
+    user_dict = {name: uid for uid, name in usuarios}
+    return user_dict
 
 def print_usuarios(usuarios):
     for usuario in usuarios:
@@ -143,3 +167,29 @@ def actualizar_varios(conn, tabla, lista_valores, condicion_campo):
     for item in lista_valores:
         condicion_valor = item.pop(condicion_campo)
         actualizar_registro(conn, tabla, item, condicion_campo, condicion_valor)
+
+
+def insertar_registro(conn, tabla, valores):
+    """
+    Inserta un registro en la tabla de forma dinámica.
+
+    conn: conexión sqlite3
+    tabla: str → nombre de la tabla
+    valores: dict → {'campo1': valor1, 'campo2': valor2, ...}
+    """
+    campos = ", ".join(valores.keys())
+    placeholders = ", ".join(["?"] * len(valores))
+    query = f"INSERT INTO {tabla} ({campos}) VALUES ({placeholders})"
+
+    cursor = conn.cursor()
+    cursor.execute(query, list(valores.values()))
+    conn.commit()
+
+def insertar_varios(tabla, lista_valores):
+    """
+    Inserta varios registros en la tabla a partir de una lista de diccionarios.
+    """
+    conn = get_db_connection()
+    for item in lista_valores:
+        insertar_registro(conn, tabla, item)
+    cerrar_BBDD(conn)

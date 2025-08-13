@@ -4,6 +4,7 @@ import locale
 from selenium.webdriver.common.by import By
 from datetime import datetime, date
 from collections import Counter
+from bloque_bbdd import get_db_connection, obtener_userId
 
 def do_login(driver):
     driver.get(URL_BIWENGER_HOME)
@@ -41,13 +42,12 @@ def do_obtener_usuarios(driver):
             href = enlace.get_attribute("href")
             num_jug = card.find_element(By.CSS_SELECTOR, "div.main h4").text.split(' jug.')[0]
 
-            if nombre != NOMBRE_MI_EQUIPO:
-                usuario = {
-                    "name": nombre,
-                    "url_name": href,
-                    "num_jug": int(num_jug)
-                }
-                usuarios.append(usuario)
+            usuario = {
+                "name": nombre,
+                "url_name": href,
+                "num_jug": int(num_jug)
+            }
+            usuarios.append(usuario)
         except:
             continue  # Por si algún user-card no tiene nombre o el selector falla
     print(usuarios)
@@ -141,9 +141,10 @@ def traducir_mes(mes_es):
         mes_es = mes_es.replace(f" {esp} ", f" {eng} ")
     return mes_es
 def mostrar_texto_h3(posts):
+    movimientos_to_insert = []
+    conn = get_db_connection()
+    user_dict = obtener_userId(conn)
     for i, post in enumerate(posts, start=1):
-        # output_json = html_to_json.convert(post)
-        # print(f'output_json es: {cardName}')
         try:
             header_div = post.find_element(By.CSS_SELECTOR, "div.header.ng-star-inserted")
             h3_element = header_div.find_element(By.TAG_NAME, "h3")
@@ -153,19 +154,24 @@ def mostrar_texto_h3(posts):
             cardName = h3_element.text.strip()
             # print(f'{cardName} ({date_str})')
             if cardName == 'MERCADO DE FICHAJES':
-                print(f"\n📌 Post {i}:")
-                print(f"   - {h3_element.text.strip()} ({date_str})")
-                merc_fichajes_div = post.find_element(By.CSS_SELECTOR, "div.content.market")
-                fichajes = merc_fichajes_div.find_elements(By.TAG_NAME, 'li')
-                for fichaje in fichajes:
-                    fichajeH3 = fichaje.find_element(By.TAG_NAME, "h3")
-                    fichajeName = fichajeH3.text.strip()
-                    userlink = fichaje.find_element(By.TAG_NAME, 'user-link')
-                    userName = userlink.find_element(By.TAG_NAME, 'a').text.strip()
-                    valorCompraStr = fichaje.find_element(By.TAG_NAME, 'strong').text.strip()
-                    valor_limpio = valorCompraStr.replace('.', '').replace('€', '').replace(' ', '')
-                    valorCompra = int(valor_limpio)
-                    print(f"      - {fichajeName}: Comprado por {userName} por {valorCompra} €")
+                try:
+                    print(f"\n📌 Post {i}:")
+                    print(f"   - {h3_element.text.strip()} ({date_str})")
+                    merc_fichajes_div = post.find_element(By.CSS_SELECTOR, "div.content.market")
+                    fichajes = merc_fichajes_div.find_elements(By.TAG_NAME, 'li')
+                    for fichaje in fichajes:
+                        fichajeH3 = fichaje.find_element(By.TAG_NAME, "h3")
+                        fichajeName = fichajeH3.text.strip()
+                        userlink = fichaje.find_element(By.TAG_NAME, 'user-link')
+                        userName = userlink.find_element(By.TAG_NAME, 'a').text.strip()
+                        valorCompraStr = fichaje.find_element(By.TAG_NAME, 'strong').text.strip()
+                        valor_limpio = valorCompraStr.replace('.', '').replace('€', '').replace(' ', '')
+                        valorCompra = int(valor_limpio)
+                        print(f"      - {fichajeName}: Comprado por {userName} por {valorCompra} €")
+                        movimiento = {"usuario_id": user_dict[userName], "tipo":"fichaje", "jugador": fichajeName, "cantidad": -valorCompra, "fecha":str(date_str)}
+                        movimientos_to_insert.append(movimiento)
+                except Exception as e:
+                    print(f"   ⚠️ Excepcion en MERCADO DE FICHAJES: {e}")
             elif cardName == 'FICHAJES':
                 try:
                     print(f"\n📌 Post {i}:")
@@ -181,6 +187,8 @@ def mostrar_texto_h3(posts):
                             valor_limpio = valorVentaStr.replace('.', '').replace('€', '').replace(' ', '')
                             valorVenta = int(valor_limpio)
                             print(f"      - {jugadorName}: Vendido por {userName} a Mercado por {valorVenta} €")
+                            movimiento = {"usuario_id": user_dict[userName], "tipo":"venta", "jugador": jugadorName, "cantidad": valorVenta, "fecha":str(date_str)}
+                            movimientos_to_insert.append(movimiento)
                     else:
                         content_transfer_div = post.find_element(By.CSS_SELECTOR, "div.content.transfer")
                         jugadores_transferidos = content_transfer_div.find_elements(By.TAG_NAME, 'li')
@@ -194,6 +202,12 @@ def mostrar_texto_h3(posts):
                             valor_limpio = valorVentaStr.replace('.', '').replace('€', '').replace(' ', '')
                             valor = int(valor_limpio)
                             print(f"      - {jugadorName}: Vendido por {userNameVenta} a {userNameCompra} por {valor} €")
+
+                            movimientoVenta = {"usuario_id": user_dict[userNameVenta], "tipo": "venta", "jugador": jugadorName, "cantidad": valor, "fecha": str(date_str)}
+                            movimientos_to_insert.append(movimientoVenta)
+                            if userNameCompra.lower() != 'mercado':
+                                movimientoCompra = {"usuario_id": user_dict[userNameCompra], "tipo": "fichaje", "jugador": jugadorName, "cantidad": -valor, "fecha": str(date_str)}
+                                movimientos_to_insert.append(movimientoCompra)
 
                 except Exception as e:
                     print(f"   ⚠️ Excepcion en FICHAJES: {e}")
@@ -221,7 +235,10 @@ def mostrar_texto_h3(posts):
                         valor_limpio = valorVentaStr.replace('.', '').replace('€', '').replace(' ', '')
                         valor = int(valor_limpio)
                         print(f"      - {userNameCompra} ha pagado la clausula de {fichajeName} a {userNameVenta} por {valor} €")
-
+                        movimientoVenta = {"usuario_id": user_dict[userNameCompra], "tipo": "fichaje", "jugador": fichajeName, "cantidad": -valor, "fecha": str(date_str)}
+                        movimientos_to_insert.append(movimientoVenta)
+                        movimientoCompra = {"usuario_id": user_dict[userNameVenta], "tipo": "clausulazo", "jugador": fichajeName, "cantidad": valor, "fecha": str(date_str)}
+                        movimientos_to_insert.append(movimientoCompra)
                 except Exception as e:
                     print(f"   ⚠️ Excepcion en FICHAJES: {e}")
             elif cardName == 'ABONOS Y PENALIZACIONES':
@@ -237,10 +254,13 @@ def mostrar_texto_h3(posts):
                         valor_limpio = decrement.replace('.', '').replace('€', '').replace(' ', '')
                         valor = int(valor_limpio)
                         print(f"      - {userName} ha sido penalizado por el administrador con {valor} €")
+                        movimientoPenalizacion = {"usuario_id": user_dict[userName], "tipo": "penalizacion", "jugador": "", "cantidad": -valor, "fecha": str(date_str)}
+                        movimientos_to_insert.append(movimientoPenalizacion)
                 except Exception as e:
                     print(f"   ⚠️ Excepcion en FICHAJES: {e}")
         except Exception as e:
             print(f"   ⚠️ No se pudo encontrar el h3 esperado: {e}")
+    return movimientos_to_insert
 
 def obtener_ventas_y_compras(posts):
     resumen_usuarios = {}
