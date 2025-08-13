@@ -140,7 +140,7 @@ def traducir_mes(mes_es):
     for esp, eng in traducciones.items():
         mes_es = mes_es.replace(f" {esp} ", f" {eng} ")
     return mes_es
-def mostrar_texto_h3(posts):
+def obtenerMovimientos(posts):
     movimientos_to_insert = []
     conn = get_db_connection()
     user_dict = obtener_userId(conn)
