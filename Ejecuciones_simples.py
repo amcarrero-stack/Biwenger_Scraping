@@ -2,7 +2,6 @@ from collections import Counter
 from bloque_bbdd import *
 import locale
 from datetime import datetime, date
-from prueba import obtener_resumen_movimientos, obtener_saldos_actualizados
 
 #crear tablas si no existen
 # conn = get_db_connection()
@@ -10,13 +9,13 @@ from prueba import obtener_resumen_movimientos, obtener_saldos_actualizados
 
 
 # BORRAR USUARIOS
-# conn = get_db_connection()
-# borrar_todos_los_usuarios(conn)
+conn = get_db_connection()
+borrar_todos_los_usuarios(conn)
 # print_usuarios(obtener_userinfo_bbdd(conn))
 
 # BORRAR MOVIMIENTOS
-# conn = get_db_connection()
-# borrar_todos_los_movimientos(conn)
+conn = get_db_connection()
+borrar_todos_los_movimientos(conn)
 
 
 # locale.setlocale(locale.LC_TIME, "C")  # Fuerza el formato inglés estándar
@@ -66,9 +65,9 @@ from prueba import obtener_resumen_movimientos, obtener_saldos_actualizados
 # print(saldos_actualizados)
 # cerrar_BBDD(conn)
 
-conn = get_db_connection()
-user_dict = obtener_userId(conn)
-resumen_movimientos_hoy = obtener_resumen_movimientos_hoy(conn, user_dict)
-print(resumen_movimientos_hoy)
-cerrar_BBDD(conn)
+# conn = get_db_connection()
+# user_dict = obtener_userId(conn)
+# resumen_movimientos_hoy = obtener_resumen_movimientos_hoy(conn, user_dict)
+# print(resumen_movimientos_hoy)
+# cerrar_BBDD(conn)
 

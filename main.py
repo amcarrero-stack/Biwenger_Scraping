@@ -34,6 +34,9 @@ def main():
         print(f"movimientos_to_insert es {movimientos_to_insert}")
         insertar_varios('movimientos', movimientos_to_insert)
 
+        # compras_y_ventas = obtener_ventas_y_compras(posts)
+        # print(compras_y_ventas)
+
         user_dict = obtener_userId(conn)
         resumen_movimientos = obtener_resumen_movimientos(conn, user_dict)
         print(resumen_movimientos)
