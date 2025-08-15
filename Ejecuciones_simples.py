@@ -2,6 +2,7 @@ from collections import Counter
 from bloque_bbdd import *
 import locale
 from datetime import datetime, date
+from bloque_1_selenium import traducir_mes
 
 #crear tablas si no existen
 # conn = get_db_connection()
@@ -26,6 +27,8 @@ borrar_todos_los_movimientos(conn)
 
 # locale.setlocale(locale.LC_TIME, "es_ES.UTF-8")
 # fecha_hoy = datetime.today()
+# print(fecha_hoy)
+# print(type(fecha_hoy))
 # fecha_formateada = fecha_hoy.strftime("%d %b %Y").replace('.', '')  # en Linux/Mac, para Windows usar diferente
 #
 # print(fecha_formateada)
@@ -71,3 +74,15 @@ borrar_todos_los_movimientos(conn)
 # print(resumen_movimientos_hoy)
 # cerrar_BBDD(conn)
 
+
+# fecha_inicio_str = "14 ago 2025"
+# locale.setlocale(locale.LC_TIME, "C")
+# fecha_str_traducida = traducir_mes(fecha_inicio_str)
+# cutoff_datetime = datetime.strptime(fecha_str_traducida, "%d %b %Y")
+
+# locale.setlocale(locale.LC_TIME, "C")
+# fecha_str = "14 Aug 2025"
+# fecha_dt = datetime.strptime(fecha_str, "%d %b %Y").date()  # Parseamos a datetime
+#
+# print(fecha_dt)
+# print(type(fecha_dt))

@@ -76,3 +76,12 @@ def formatear_fecha_biwenger(fecha_str):
         log_message(f"Error al parsear fecha '{fecha_str}': {e}")
         return None
 
+def traducir_mes(mes_es):
+    traducciones = {
+        "ene": "Jan", "feb": "Feb", "mar": "Mar", "abr": "Apr",
+        "may": "May", "jun": "Jun", "jul": "Jul", "ago": "Aug",
+        "sep": "Sep", "oct": "Oct", "nov": "Nov", "dic": "Dec"
+    }
+    for esp, eng in traducciones.items():
+        mes_es = mes_es.replace(f" {esp} ", f" {eng} ")
+    return mes_es

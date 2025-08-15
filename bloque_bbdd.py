@@ -2,6 +2,7 @@ import sqlite3
 from pathlib import Path
 from datetime import datetime
 import locale
+from utils import traducir_mes
 
 # Asegúrate de establecer el locale en español para los nombres de los meses
 locale.setlocale(locale.LC_TIME, 'es_ES.UTF-8')  # En Windows puede ser 'Spanish_Spain'
@@ -17,16 +18,16 @@ def get_db_connection():
 
 def crear_tablas_si_no_existen(conn):
     cursor = conn.cursor()
-    # cursor.execute('''
-    #     CREATE TABLE IF NOT EXISTS usuarios (
-    #         id INTEGER PRIMARY KEY AUTOINCREMENT,
-    #         name TEXT UNIQUE NOT NULL,
-    #         url_name TEXT UNIQUE NOT NULL,
-    #         saldo INTEGER NOT NULL,
-    #         num_jugadores INTEGER,
-    #         modificationDate TEXT
-    #     )
-    # ''')
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS usuarios (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT UNIQUE NOT NULL,
+            url_name TEXT UNIQUE NOT NULL,
+            saldo INTEGER NOT NULL,
+            num_jugadores INTEGER,
+            modificationDate DATE
+        )
+    ''')
 
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS movimientos (
@@ -35,7 +36,7 @@ def crear_tablas_si_no_existen(conn):
             tipo TEXT CHECK(tipo IN ('fichaje', 'venta', 'clausulazo', 'abono', 'penalizacion')),
             jugador TEXT,
             cantidad REAL,
-            fecha TEXT,
+            fecha DATE,
             FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
         )
     ''')
@@ -44,17 +45,23 @@ def crear_tablas_si_no_existen(conn):
 # Insertar un usuario
 def insertar_usuarios(conn, usuarios):
     cursor = conn.cursor()
+    locale.setlocale(locale.LC_TIME, "C")
     for user in usuarios:
         name = user['name']
         url_name = user['url_name']
         num_jugadores = user['num_jug']
-        modificationDate = '1 ago 2025' #fecha inicial del juego
+
+        fecha_inicio_str = "1 ago 2025"
+        fecha_str_traducida = traducir_mes(fecha_inicio_str)
+        fecha_inicio_datetime = datetime.strptime(fecha_str_traducida, "%d %b %Y")
+        fecha_inicio_sql = fecha_inicio_datetime.strftime("%Y-%m-%d")
+
         saldo = 40000000
 
         cursor.execute('''
             INSERT INTO usuarios (name, url_name, saldo, num_jugadores, modificationDate)
             VALUES (?, ?, ?, ?, ?)
-        ''', (name, url_name, saldo, num_jugadores, modificationDate))
+        ''', (name, url_name, saldo, num_jugadores, fecha_inicio_sql))
     conn.commit()
 
 def borrar_todos_los_usuarios(conn):
@@ -76,12 +83,26 @@ def borrar_todos_los_movimientos(conn):
     except Exception as e:
         print(f"Error al borrar los movimientos {e}")
 
-# Consultar usuarios
 def obtener_userinfo_bbdd(conn):
     cursor = conn.cursor()
-    cursor.execute("SELECT id, name, saldo, url_name, num_jugadores, modificationDate FROM usuarios")
+    cursor.execute("""
+        SELECT id, name, saldo, url_name, num_jugadores, modificationDate
+        FROM usuarios
+    """)
     usuarios = cursor.fetchall()
-    return usuarios
+
+    # Convertir la fecha a datetime.date si viene como string
+    usuarios_convertidos = []
+    for u in usuarios:
+        fecha = u[5]
+        if isinstance(fecha, str):
+            fecha = datetime.strptime(fecha, "%Y-%m-%d").date()
+        usuarios_convertidos.append((
+            u[0], u[1], u[2], u[3], u[4], fecha
+        ))
+
+    return usuarios_convertidos
+
 
 
 def obtener_userId(conn):
@@ -152,15 +173,14 @@ def actualizar_saldos_new(conn, nuevos_saldos):
     cursor = conn.cursor()
     # Obtener la fecha actual en formato "5 ago 2025"
     locale.setlocale(locale.LC_TIME, "es_ES.UTF-8")
-    fecha_hoy = datetime.today()
-    fecha_formateada = fecha_hoy.strftime("%d %b %Y").replace('.', '')
+    fecha_hoy = datetime.today().date()
 
     # Normaliza a lista de tuplas (saldo, modificationDate, id)
     if isinstance(nuevos_saldos, dict):
-        pares = [(int(saldo), fecha_formateada, int(uid)) for uid, saldo in nuevos_saldos.items()]
+        pares = [(int(saldo), fecha_hoy, int(uid)) for uid, saldo in nuevos_saldos.items()]
     else:
         # asumimos iterable de dicts con keys 'usuario_id' y 'saldo'
-        pares = [(int(item['saldo']), fecha_formateada, int(item['usuario_id'])) for item in nuevos_saldos]
+        pares = [(int(item['saldo']), fecha_hoy, int(item['usuario_id'])) for item in nuevos_saldos]
 
     # Actualizamos saldo y modificationDate
     cursor.executemany(
@@ -250,10 +270,13 @@ def insertar_varios(tabla, lista_valores):
         insertar_registro(conn, tabla, item)
     cerrar_BBDD(conn)
 
-def obtener_resumen_movimientos(conn, user_dict):
+import locale
+from datetime import datetime
+
+def obtener_resumen_movimientos(conn, user_dict, fecha_inicio_str):
     cursor = conn.cursor()
     resultados = []
-
+    fecha_hoy = datetime.today().date()
     for nombre, user_id in user_dict.items():
         resumen = {'usuario_id': user_id}
 
@@ -261,37 +284,46 @@ def obtener_resumen_movimientos(conn, user_dict):
         cursor.execute("""
             SELECT COALESCE(SUM(cantidad), 0)
             FROM movimientos
-            WHERE usuario_id = ? AND tipo = 'venta'
-        """, (user_id,))
+            WHERE usuario_id = ?
+              AND tipo = 'venta'
+              AND fecha BETWEEN ? AND ?
+        """, (user_id, fecha_inicio_str, fecha_hoy))
         resumen['ventas'] = cursor.fetchone()[0]
 
         # Fichajes
         cursor.execute("""
             SELECT COALESCE(SUM(cantidad), 0)
             FROM movimientos
-            WHERE usuario_id = ? AND tipo = 'fichaje'
-        """, (user_id,))
+            WHERE usuario_id = ?
+              AND tipo = 'fichaje'
+              AND fecha BETWEEN ? AND ?
+        """, (user_id, fecha_inicio_str, fecha_hoy))
         resumen['fichajes'] = cursor.fetchone()[0]
 
         # Penalizaciones
         cursor.execute("""
             SELECT COALESCE(SUM(cantidad), 0)
             FROM movimientos
-            WHERE usuario_id = ? AND tipo = 'penalizacion'
-        """, (user_id,))
+            WHERE usuario_id = ?
+              AND tipo = 'penalizacion'
+              AND fecha BETWEEN ? AND ?
+        """, (user_id, fecha_inicio_str, fecha_hoy))
         resumen['penalizaciones'] = cursor.fetchone()[0]
 
         # Clausulazos
         cursor.execute("""
             SELECT COALESCE(SUM(cantidad), 0)
             FROM movimientos
-            WHERE usuario_id = ? AND tipo = 'clausulazo'
-        """, (user_id,))
+            WHERE usuario_id = ?
+              AND tipo = 'clausulazo'
+              AND fecha BETWEEN ? AND ?
+        """, (user_id, fecha_inicio_str, fecha_hoy))
         resumen['clausulazos'] = cursor.fetchone()[0]
 
         resultados.append(resumen)
 
     return resultados
+
 
 def obtener_resumen_movimientos_hoy(conn, user_dict):
     cursor = conn.cursor()
