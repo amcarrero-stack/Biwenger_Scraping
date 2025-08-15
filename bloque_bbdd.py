@@ -18,29 +18,42 @@ def get_db_connection():
 
 def crear_tablas_si_no_existen(conn):
     cursor = conn.cursor()
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS usuarios (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT UNIQUE NOT NULL,
-            url_name TEXT UNIQUE NOT NULL,
-            saldo INTEGER NOT NULL,
-            num_jugadores INTEGER,
-            modificationDate DATE
-        )
-    ''')
+    # cursor.execute('''
+    #     CREATE TABLE IF NOT EXISTS usuarios (
+    #         id INTEGER PRIMARY KEY AUTOINCREMENT,
+    #         name TEXT UNIQUE NOT NULL,
+    #         url_name TEXT UNIQUE NOT NULL,
+    #         saldo INTEGER NOT NULL,
+    #         saldo_anterior INTEGER NOT NULL,
+    #         num_jugadores INTEGER,
+    #         modificationDate DATE
+    #     )
+    # ''')
 
     cursor.execute('''
-        CREATE TABLE IF NOT EXISTS movimientos (
+        CREATE TABLE IF NOT EXISTS usuarios_historial (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             usuario_id INTEGER NOT NULL,
-            tipo TEXT CHECK(tipo IN ('fichaje', 'venta', 'clausulazo', 'abono', 'penalizacion')),
-            jugador TEXT,
-            cantidad REAL,
-            fecha DATE,
+            saldo INTEGER NOT NULL,
+            num_jugadores INTEGER,
+            modificationDate DATE,
+            tipo_actualizacion TEXT CHECK(tipo_actualizacion IN ('delete', 'update', 'insert')),
             FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
         )
     ''')
-    conn.commit()
+
+    # cursor.execute('''
+    #     CREATE TABLE IF NOT EXISTS movimientos (
+    #         id INTEGER PRIMARY KEY AUTOINCREMENT,
+    #         usuario_id INTEGER NOT NULL,
+    #         tipo TEXT CHECK(tipo IN ('fichaje', 'venta', 'clausulazo', 'abono', 'penalizacion')),
+    #         jugador TEXT,
+    #         cantidad REAL,
+    #         fecha DATE,
+    #         FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
+    #     )
+    # ''')
+    # conn.commit()
 
 # Insertar un usuario
 def insertar_usuarios(conn, usuarios):
@@ -59,9 +72,9 @@ def insertar_usuarios(conn, usuarios):
         saldo = 40000000
 
         cursor.execute('''
-            INSERT INTO usuarios (name, url_name, saldo, num_jugadores, modificationDate)
-            VALUES (?, ?, ?, ?, ?)
-        ''', (name, url_name, saldo, num_jugadores, fecha_inicio_sql))
+            INSERT INTO usuarios (name, url_name, saldo, saldo_anterior, num_jugadores, modificationDate)
+            VALUES (?, ?, ?, ?, ?, ?)
+        ''', (name, url_name, saldo, saldo, num_jugadores, fecha_inicio_sql))
     conn.commit()
 
 def borrar_todos_los_usuarios(conn):
@@ -123,6 +136,19 @@ def obtener_saldos(conn):
     user_dict = {uid: saldo for uid, saldo in usuarios}
     return user_dict
 
+def obtener_movimientos_hoy(conn):
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM movimientos WHERE fecha = date('now')")
+
+    return cursor.fetchall()
+
+def delete_movimientos(conn, movimientos):
+    cursor = conn.cursor()
+    for mov in movimientos:
+        # Aquí asumo que el id del movimiento está en la primera posición de la tupla
+        cursor.execute("DELETE FROM movimientos WHERE id = ?", (mov[0],))
+    conn.commit()
+
 def print_usuarios(usuarios):
     for usuario in usuarios:
         print(f"ID: {usuario[0]}, Nombre: {usuario[1]}, Saldo: {usuario[2]}, URL Name: {usuario[3]}, Jugadores: {usuario[4]}, Fecha: {usuario[5]}")
@@ -174,17 +200,20 @@ def actualizar_saldos_new(conn, nuevos_saldos):
     # Obtener la fecha actual en formato "5 ago 2025"
     locale.setlocale(locale.LC_TIME, "es_ES.UTF-8")
     fecha_hoy = datetime.today().date()
+    saldos_actuales_by_userId = obtener_saldos(conn)
 
     # Normaliza a lista de tuplas (saldo, modificationDate, id)
     if isinstance(nuevos_saldos, dict):
-        pares = [(int(saldo), fecha_hoy, int(uid)) for uid, saldo in nuevos_saldos.items()]
+        pares = [(int(saldo), fecha_hoy, int(saldos_actuales_by_userId[uid]), int(uid)) for uid, saldo in nuevos_saldos.items()]
     else:
         # asumimos iterable de dicts con keys 'usuario_id' y 'saldo'
-        pares = [(int(item['saldo']), fecha_hoy, int(item['usuario_id'])) for item in nuevos_saldos]
+        pares = [(int(item['saldo']), fecha_hoy, int(saldos_actuales_by_userId[item['usuario_id']]), int(item['usuario_id'])) for item in nuevos_saldos]
 
+    print('Pares es:')
+    print(pares)
     # Actualizamos saldo y modificationDate
     cursor.executemany(
-        "UPDATE usuarios SET saldo = ?, modificationDate = ? WHERE id = ?",
+        "UPDATE usuarios SET saldo = ?, modificationDate = ?, saldo_anterior = ?  WHERE id = ?",
         pares
     )
     conn.commit()
@@ -325,12 +354,13 @@ def obtener_resumen_movimientos(conn, user_dict, fecha_inicio_str):
     return resultados
 
 
-def obtener_resumen_movimientos_hoy(conn, user_dict):
+def obtener_resumen_movimientos_desde_ultima_actualizacion(conn, fecha_inicio_str):
     cursor = conn.cursor()
     resultados = []
     locale.setlocale(locale.LC_TIME, "es_ES.UTF-8")
     fecha_hoy = datetime.today()
     fecha_formateada = fecha_hoy.strftime("%d %b %Y").replace('.', '')
+    user_dict = obtener_userId(conn)
 
     for nombre, user_id in user_dict.items():
         resumen = {'usuario_id': user_id}
@@ -393,6 +423,34 @@ def obtener_saldos_actualizados(conn, movimientos):
                 + mov.get('clausulazos', 0)
                 + mov.get('fichajes', 0)  # ya viene negativo
                 + mov.get('penalizaciones', 0)  # ya viene negativo
+        )
+
+        # Guardar el saldo final en el diccionario
+        saldos_actuales[usuario_id] = saldo_final
+
+    return saldos_actuales
+
+def obtener_saldos_actualizados_hoy(conn, movimientos):
+    # Obtener saldos actuales de la BBDD
+    saldos_actuales = obtener_saldos(conn)  # {usuario_id: saldo}
+
+    # Recorrer cada movimiento y actualizar el saldo
+    for mov in movimientos:
+        usuario_id = mov['usuario_id']
+
+        if usuario_id not in saldos_actuales:
+            print(f"⚠ Usuario {usuario_id} no encontrado en BBDD, se omite.")
+            continue
+
+        saldo_inicial = saldos_actuales[usuario_id]
+
+        # Aplicar sumas y restas
+        saldo_final = (
+                saldo_inicial
+                - mov.get('ventas', 0)
+                - mov.get('clausulazos', 0)
+                - mov.get('fichajes', 0)  # ya viene negativo
+                - mov.get('penalizaciones', 0)  # ya viene negativo
         )
 
         # Guardar el saldo final en el diccionario

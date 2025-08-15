@@ -25,6 +25,11 @@ def crear_driver():
     # options.add_argument("--disable-dev-shm-usage")
     # options.add_experimental_option("detach", True)
     options.add_argument("--start-maximized")
+
+    # options.add_argument("--headless=new")  # o "--headless"
+    # options.add_argument("--disable-gpu")
+    # options.add_argument("--window-size=1920,1080")
+
     try:
         log_message("🟡 Iniciando Chrome con perfil de usuario...")
 

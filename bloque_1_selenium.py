@@ -6,6 +6,7 @@ from datetime import datetime, date
 from collections import Counter
 from bloque_bbdd import get_db_connection, obtener_userId
 from utils import traducir_mes
+import os
 
 def do_login(driver):
     driver.get(URL_BIWENGER_HOME)
@@ -75,7 +76,7 @@ def get_posts_until_date(driver, cutoff_datetime):
                 fecha_str_traducida = traducir_mes(date_str)
                 post_datetime = datetime.strptime(fecha_str_traducida, "%d %b %Y").date()
 
-                if is_a_valid_post and post_datetime < cutoff_datetime:
+                if is_a_valid_post(post) and post_datetime < cutoff_datetime:
                     repetir = False
                     break
                 if is_a_valid_post(post):
@@ -92,6 +93,31 @@ def get_posts_until_date(driver, cutoff_datetime):
             # Ya no hay más contenido para cargar
             break
         last_height = new_height
+    return postToRet
+
+def get_posts_until_date_mock(driver, cutoff_datetime):
+    locale.setlocale(locale.LC_TIME, "C")
+    html_file = os.path.abspath("mock.html")
+    driver.get("file://" + html_file)
+    postToRet = []
+
+    all_posts = driver.find_elements(By.CSS_SELECTOR, 'league-board-post')
+    print(f'all_posts len es: {len(all_posts)}')
+    for post in all_posts:
+        try:
+            date_elem = post.find_element(By.CSS_SELECTOR, "div.date")
+            date_str = date_elem.get_attribute("title").split(',')[0]  # Ej: "29 jul 2025, 13:37:05"
+            if not date_str:
+                continue
+            fecha_str_traducida = traducir_mes(date_str)
+            post_datetime = datetime.strptime(fecha_str_traducida, "%d %b %Y").date()
+
+            if is_a_valid_post(post) and post_datetime < cutoff_datetime:
+                break
+            if is_a_valid_post(post):
+                postToRet.append(post)
+        except Exception:
+            continue
     return postToRet
 
 def is_a_valid_post(league_board_post):

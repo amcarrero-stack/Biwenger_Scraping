@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?><sqlb_project><db path="biwenger.db" readonly="0" foreign_keys="1" case_sensitive_like="0" temp_store="0" wal_autocheckpoint="1000" synchronous="2"/><attached/><window><main_tabs open="structure browser pragmas query" current="0"/></window><tab_structure><column_width id="0" width="300"/><column_width id="1" width="0"/><column_width id="2" width="100"/><column_width id="3" width="1001"/><column_width id="4" width="0"/><expanded_item id="0" parent="1"/><expanded_item id="1" parent="1"/><expanded_item id="2" parent="1"/><expanded_item id="3" parent="1"/></tab_structure><tab_browse><table title="sqlite_sequence" custom_title="0" dock_id="4" table="4,15:mainsqlite_sequence"/><dock_state state="000000ff00000000fd00000001000000020000058100000390fc0100000004fb000000160064006f0063006b00420072006f00770073006500310100000000ffffffff0000000000000000fb000000160064006f0063006b00420072006f00770073006500320100000000000005810000000000000000fb000000160064006f0063006b00420072006f00770073006500330100000000ffffffff0000000000000000fb000000160064006f0063006b00420072006f00770073006500340100000000ffffffff0000011e00ffffff000002690000000000000004000000040000000800000008fc00000000"/><default_encoding codec=""/><browse_table_settings/></tab_browse><tab_sql><sql name="ALL USERS*">SELECT * FROM usuarios</sql><sql name="ALL MOVIMIENTOS*">SELECT m.*, u.name
+FROM movimientos m
+JOIN usuarios u ON m.usuario_id = u.id ORDER BY fecha DESC</sql><sql name="ALL CLAUSULAZOS*">SELECT m.*, u.name
+FROM movimientos m
+JOIN usuarios u ON m.usuario_id = u.id
+WHERE tipo = 'clausulazo'</sql><sql name="MOVIMIENTOS FILTRADOS*">SELECT m.*, u.name
+FROM movimientos m
+JOIN usuarios u ON m.usuario_id = u.id
+WHERE m.usuario_id = 23 AND tipo = 'venta';</sql><sql name="TOTAL VENTAS POR USUARIO*">SELECT u.name, SUM(m.cantidad) AS total_cantidad
+FROM movimientos m
+JOIN usuarios u ON m.usuario_id = u.id
+WHERE m.usuario_id = 91 AND m.tipo = 'venta' AND fecha = '14 ago 2025';</sql><sql name="TOTAL FICHAJES POR USUARIO*">SELECT u.name, SUM(m.cantidad) AS total_cantidad
+FROM movimientos m
+JOIN usuarios u ON m.usuario_id = u.id
+WHERE m.usuario_id = 91 AND m.tipo = 'fichaje';</sql><sql name="TOTAL CLAUSULAZOS POR USUARIO*">SELECT u.name, SUM(m.cantidad) AS total_cantidad
+FROM movimientos m
+JOIN usuarios u ON m.usuario_id = u.id
+WHERE m.usuario_id = 88 AND m.tipo = 'clausulazo';</sql><sql name="TOTAL PENALIZACIONES POR USUARIO*">SELECT u.name, SUM(m.cantidad) AS total_cantidad
+FROM movimientos m
+JOIN usuarios u ON m.usuario_id = u.id
+WHERE m.usuario_id = 33 AND m.tipo = 'penalizacion';</sql><sql name="ALL MOVIMIENTOS* (1)*">SELECT *
+FROM movimientos
+WHERE fecha = '14 ago 2025'</sql><current_tab id="0"/></tab_sql></sqlb_project>

@@ -5,18 +5,18 @@ from datetime import datetime, date
 from bloque_1_selenium import traducir_mes
 
 #crear tablas si no existen
+conn = get_db_connection()
+crear_tablas_si_no_existen(conn)
+cerrar_BBDD(conn)
+
+# # BORRAR USUARIOS
 # conn = get_db_connection()
-# crear_tablas_si_no_existen(conn)
-
-
-# BORRAR USUARIOS
-conn = get_db_connection()
-borrar_todos_los_usuarios(conn)
+# borrar_todos_los_usuarios(conn)
 # print_usuarios(obtener_userinfo_bbdd(conn))
-
-# BORRAR MOVIMIENTOS
-conn = get_db_connection()
-borrar_todos_los_movimientos(conn)
+#
+# # BORRAR MOVIMIENTOS
+# conn = get_db_connection()
+# borrar_todos_los_movimientos(conn)
 
 
 # locale.setlocale(locale.LC_TIME, "C")  # Fuerza el formato inglés estándar
