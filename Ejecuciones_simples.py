@@ -63,7 +63,7 @@ from utils import print_usuarios
 
 
 # conn = get_db_connection()
-# user_dict = obtener_userId(conn)
+# user_dict = obtener_userIds(conn)
 # resumen_movimientos = obtener_resumen_movimientos(conn, user_dict)
 # print(resumen_movimientos)
 # saldos_actualizados = obtener_saldos_actualizados(conn, resumen_movimientos)
@@ -71,7 +71,7 @@ from utils import print_usuarios
 # cerrar_BBDD(conn)
 
 # conn = get_db_connection()
-# user_dict = obtener_userId(conn)
+# user_dict = obtener_userIds(conn)
 # resumen_movimientos_hoy = obtener_resumen_movimientos_hoy(conn, user_dict)
 # print(resumen_movimientos_hoy)
 # cerrar_BBDD(conn)

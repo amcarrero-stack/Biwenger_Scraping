@@ -4,8 +4,8 @@ import locale
 from selenium.webdriver.common.by import By
 from datetime import datetime, date
 from collections import Counter
-from bloque_bbdd import get_db_connection, obtener_userId
-from utils import traducir_mes
+from bloque_bbdd import get_db_connection, obtener_userIds
+from utils import traducir_mes, log_message, log_message_with_print
 import os
 
 locale.setlocale(locale.LC_TIME, "C")
@@ -54,11 +54,11 @@ def do_obtener_usuarios(driver):
             usuarios.append(usuario)
         except:
             continue  # Por si algún user-card no tiene nombre o el selector falla
-    print(usuarios)
+    log_message(usuarios)
     return usuarios
 
 def get_posts_until_date(driver, cutoff_datetime):
-    print('entra en get_posts_until_date')
+    log_message('entra en get_posts_until_date')
     driver.get(URL_BIWENGER_HOME)
     last_height = driver.execute_script("return document.body.scrollHeight")
     repetir = True
@@ -66,7 +66,7 @@ def get_posts_until_date(driver, cutoff_datetime):
     while repetir:
         time.sleep(1)
         all_posts = driver.find_elements(By.CSS_SELECTOR, 'league-board-post')
-        print(f'all_posts len es: {len(all_posts)}')
+        log_message(f'all_posts len es: {len(all_posts)}')
         postToRet = []
         for post in all_posts:
             try:
@@ -103,12 +103,12 @@ def is_a_valid_post(league_board_post):
         cardName = h3_element.text.strip()
         return cardName == 'MERCADO DE FICHAJES' or cardName == 'FICHAJES' or cardName == 'CAMBIO DE NOMBRE' or cardName == 'CLÁUSULAS' or cardName == 'ABONOS Y PENALIZACIONES' or cardName == 'MOVIMIENTO DE JUGADORES'
     except Exception as e:
-        print(f"⚠️ No se pudo encontrar el h3 esperado")
+        log_message(f"⚠️ No se pudo encontrar el h3 esperado")
 
 def obtenerMovimientos(posts):
     movimientos_to_insert = []
     conn = get_db_connection()
-    user_dict = obtener_userId(conn)
+    user_dict = obtener_userIds(conn)
     for i, post in enumerate(posts, start=1):
         try:
             header_div = post.find_element(By.CSS_SELECTOR, "div.header.ng-star-inserted")
@@ -121,8 +121,8 @@ def obtenerMovimientos(posts):
             cardName = h3_element.text.strip()
             if cardName == 'MERCADO DE FICHAJES':
                 try:
-                    print(f"\n📌 Post {i}:")
-                    print(f"   - {h3_element.text.strip()} ({date_str})")
+                    log_message(f"\n📌 Post {i}:")
+                    log_message(f"   - {h3_element.text.strip()} ({date_str})")
                     merc_fichajes_div = post.find_element(By.CSS_SELECTOR, "div.content.market")
                     fichajes = merc_fichajes_div.find_elements(By.TAG_NAME, 'li')
                     for fichaje in fichajes:
@@ -133,15 +133,15 @@ def obtenerMovimientos(posts):
                         valorCompraStr = fichaje.find_element(By.TAG_NAME, 'strong').text.strip()
                         valor_limpio = valorCompraStr.replace('.', '').replace('€', '').replace(' ', '')
                         valorCompra = int(valor_limpio)
-                        print(f"      - {fichajeName}: Comprado por {userName} por {valorCompra} €")
+                        log_message(f"      - {fichajeName}: Comprado por {userName} por {valorCompra} €")
                         movimiento = {"usuario_id": user_dict[userName], "tipo":"fichaje", "jugador": fichajeName, "cantidad": -valorCompra, "fecha": str(post_datetime)}
                         movimientos_to_insert.append(movimiento)
                 except Exception as e:
-                    print(f"   ⚠️ Excepcion en MERCADO DE FICHAJES: {e}")
+                    log_message(f"   ⚠️ Excepcion en MERCADO DE FICHAJES: {e}")
             elif cardName == 'FICHAJES':
                 try:
-                    print(f"\n📌 Post {i}:")
-                    print(f"   - {h3_element.text.strip()} ({date_str})")
+                    log_message(f"\n📌 Post {i}:")
+                    log_message(f"   - {h3_element.text.strip()} ({date_str})")
                     if has_header_name(post):
                         userName = get_header_name(post)
                         content_transfer_div = post.find_element(By.CSS_SELECTOR, "div.content.transfer")
@@ -152,7 +152,7 @@ def obtenerMovimientos(posts):
                             valorVentaStr = jugador.find_element(By.TAG_NAME, 'strong').text.strip()
                             valor_limpio = valorVentaStr.replace('.', '').replace('€', '').replace(' ', '')
                             valorVenta = int(valor_limpio)
-                            print(f"      - {jugadorName}: Vendido por {userName} a Mercado por {valorVenta} €")
+                            log_message(f"      - {jugadorName}: Vendido por {userName} a Mercado por {valorVenta} €")
                             movimiento = {"usuario_id": user_dict[userName], "tipo":"venta", "jugador": jugadorName, "cantidad": valorVenta, "fecha": str(post_datetime)}
                             movimientos_to_insert.append(movimiento)
                     else:
@@ -167,7 +167,7 @@ def obtenerMovimientos(posts):
                             valorVentaStr = jugador.find_element(By.TAG_NAME, 'strong').text.strip()
                             valor_limpio = valorVentaStr.replace('.', '').replace('€', '').replace(' ', '')
                             valor = int(valor_limpio)
-                            print(f"      - {jugadorName}: Vendido por {userNameVenta} a {userNameCompra} por {valor} €")
+                            log_message(f"      - {jugadorName}: Vendido por {userNameVenta} a {userNameCompra} por {valor} €")
 
                             movimientoVenta = {"usuario_id": user_dict[userNameVenta], "tipo": "venta", "jugador": jugadorName, "cantidad": valor, "fecha": str(post_datetime)}
                             movimientos_to_insert.append(movimientoVenta)
@@ -176,19 +176,19 @@ def obtenerMovimientos(posts):
                                 movimientos_to_insert.append(movimientoCompra)
 
                 except Exception as e:
-                    print(f"   ⚠️ Excepcion en FICHAJES: {e}")
+                    log_message(f"   ⚠️ Excepcion en FICHAJES: {e}")
             elif cardName == 'CAMBIO DE NOMBRE':
-                print(f"\n📌 Post {i}:")
-                print(f"   - {h3_element.text.strip()}")
+                log_message(f"\n📌 Post {i}:")
+                log_message(f"   - {h3_element.text.strip()}")
                 content_user_name_div = post.find_element(By.CSS_SELECTOR, "div.content.userName")
                 cambioUsuarioLi = content_user_name_div.find_elements(By.TAG_NAME, 'li')[0]
                 userlink = cambioUsuarioLi.find_elements(By.TAG_NAME, 'user-link')[1]
                 userNameOld = userlink.find_element(By.TAG_NAME, 'a').text.strip()
                 userNameNew = cambioUsuarioLi.find_element(By.TAG_NAME, 'strong').text.strip()
-                print(f"      - {userNameOld} ha cambiado su nombre a {userNameNew}")
+                log_message(f"      - {userNameOld} ha cambiado su nombre a {userNameNew}")
             elif cardName == 'CLÁUSULAS':
                 try:
-                    print(f"\n📌 Post {i}:")
+                    log_message(f"\n📌 Post {i}:")
                     content_transfer_div = post.find_element(By.CSS_SELECTOR, "div.content.transfer")
                     jugadores_transferidos = content_transfer_div.find_elements(By.TAG_NAME, 'li')
                     for jugador in jugadores_transferidos:
@@ -200,17 +200,17 @@ def obtenerMovimientos(posts):
                         valorVentaStr = jugador.find_element(By.TAG_NAME, 'strong').text.strip()
                         valor_limpio = valorVentaStr.replace('.', '').replace('€', '').replace(' ', '')
                         valor = int(valor_limpio)
-                        print(f"      - {userNameCompra} ha pagado la clausula de {fichajeName} a {userNameVenta} por {valor} €")
+                        log_message(f"      - {userNameCompra} ha pagado la clausula de {fichajeName} a {userNameVenta} por {valor} €")
                         movimientoVenta = {"usuario_id": user_dict[userNameCompra], "tipo": "fichaje", "jugador": fichajeName, "cantidad": -valor, "fecha": str(post_datetime)}
                         movimientos_to_insert.append(movimientoVenta)
                         movimientoCompra = {"usuario_id": user_dict[userNameVenta], "tipo": "clausulazo", "jugador": fichajeName, "cantidad": valor, "fecha": str(post_datetime)}
                         movimientos_to_insert.append(movimientoCompra)
                 except Exception as e:
-                    print(f"   ⚠️ Excepcion en FICHAJES: {e}")
+                    log_message(f"   ⚠️ Excepcion en FICHAJES: {e}")
             elif cardName == 'ABONOS Y PENALIZACIONES':
                 try:
-                    print(f"\n📌 Post {i}:")
-                    print(f"   - {h3_element.text.strip()}")
+                    log_message(f"\n📌 Post {i}:")
+                    log_message(f"   - {h3_element.text.strip()}")
                     content_bonus_div = post.find_element(By.CSS_SELECTOR, "div.content.bonus")
                     penalizaciones = content_bonus_div.find_elements(By.TAG_NAME, 'tr')
                     for penalizacion in penalizaciones:
@@ -219,13 +219,13 @@ def obtenerMovimientos(posts):
                         decrement = post.find_element(By.CSS_SELECTOR, "increment.decrement.icon.icon-decrement").text.strip()
                         valor_limpio = decrement.replace('.', '').replace('€', '').replace(' ', '')
                         valor = int(valor_limpio)
-                        print(f"      - {userName} ha sido penalizado por el administrador con {valor} €")
+                        log_message(f"      - {userName} ha sido penalizado por el administrador con {valor} €")
                         movimientoPenalizacion = {"usuario_id": user_dict[userName], "tipo": "penalizacion", "jugador": "", "cantidad": -valor, "fecha": str(post_datetime)}
                         movimientos_to_insert.append(movimientoPenalizacion)
                 except Exception as e:
-                    print(f"   ⚠️ Excepcion en FICHAJES: {e}")
+                    log_message(f"   ⚠️ Excepcion en FICHAJES: {e}")
         except Exception as e:
-            print(f"   ⚠️ No se pudo encontrar el h3 esperado: {e}")
+            log_message(f"   ⚠️ No se pudo encontrar el h3 esperado: {e}")
     return movimientos_to_insert
 
 def has_header_name(post):
@@ -259,7 +259,7 @@ def get_user_name_fichajes(jugador):
             userNames.append(name1)
             userNames.append(name2)
     except Exception as e:
-        print(f"   ⚠️ Excepcion en get_user_name_fichajes: {e}")
+        log_message(f"   ⚠️ Excepcion en get_user_name_fichajes: {e}")
     return userNames
 
 def get_user_name_clausulas(post):
@@ -275,7 +275,7 @@ def get_user_name_clausulas(post):
             userNames.append(userNameVenta)
             userNames.append(userNameCompra)
     except Exception as e:
-        print(f"   ⚠️ Excepcion en get_user_name_clausulas: {e}")
+        log_message(f"   ⚠️ Excepcion en get_user_name_clausulas: {e}")
     return userNames
 
 def analize_user_name(userName):

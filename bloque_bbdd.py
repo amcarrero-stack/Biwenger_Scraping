@@ -2,7 +2,7 @@ import sqlite3
 from pathlib import Path
 from datetime import datetime
 import locale
-from utils import traducir_mes
+from utils import traducir_mes, log_message
 
 locale.setlocale(locale.LC_TIME, "C")
 
@@ -117,7 +117,7 @@ def obtener_userinfo_bbdd(conn):
 
 
 
-def obtener_userId(conn):
+def obtener_userIds(conn):
     cursor = conn.cursor()
     cursor.execute("SELECT id, name FROM usuarios")
     usuarios = cursor.fetchall()
@@ -125,6 +125,15 @@ def obtener_userId(conn):
     # Crear diccionario: key = name, value = id
     user_dict = {name: uid for uid, name in usuarios}
     return user_dict
+
+def obtener_userNames(conn):
+    cursor = conn.cursor()
+    cursor.execute("SELECT id, name FROM usuarios")
+    usuarios = cursor.fetchall()
+
+    # Crear diccionario: key = name, value = id
+    user_names_dict = {uid: name for uid, name in usuarios}
+    return user_names_dict
 
 def obtener_saldos(conn):
     cursor = conn.cursor()
@@ -164,8 +173,8 @@ def actualizar_saldos_new(conn, nuevos_saldos):
         # asumimos iterable de dicts con keys 'usuario_id' y 'saldo'
         pares = [(int(item['saldo']), fecha_hoy, int(saldos_actuales_by_userId[item['usuario_id']]), int(item['usuario_id'])) for item in nuevos_saldos]
 
-    print('Pares es:')
-    print(pares)
+    log_message('Pares en actualizar_saldos_new es:')
+    log_message(pares)
     # Actualizamos saldo y modificationDate
     cursor.executemany(
         "UPDATE usuarios SET saldo = ?, modificationDate = ?, saldo_anterior = ?  WHERE id = ?",
@@ -181,7 +190,7 @@ def actualizar_num_jugadores(conn, array_usuarios):
     cursor = conn.cursor()
 
     # Obtenemos el diccionario {name: usuario_id}
-    user_ids = obtener_userId(conn)
+    user_ids = obtener_userIds(conn)
 
     for usuario in array_usuarios:
         name = usuario['name']
@@ -311,7 +320,7 @@ def obtener_saldos_actualizados(conn, movimientos):
         usuario_id = mov['usuario_id']
 
         if usuario_id not in saldos_actuales:
-            print(f"⚠ Usuario {usuario_id} no encontrado en BBDD, se omite.")
+            log_message(f"⚠ Usuario {usuario_id} no encontrado en BBDD, se omite.")
             continue
 
         saldo_inicial = saldos_actuales[usuario_id]
@@ -330,6 +339,17 @@ def obtener_saldos_actualizados(conn, movimientos):
 
     return saldos_actuales
 
+def print_saldos_actualizados(conn, dict_id_saldos):
+    dict_id_userName = obtener_userNames(conn)
+    dict_username_saldos = {}
+
+    for uid, saldo in dict_id_saldos.items():
+        username = dict_id_userName.get(uid, f"ID_{uid}")  # si no existe el id, pone ID_xxx
+        dict_username_saldos[username] = saldo
+
+    return dict_username_saldos
+
+
 def obtener_saldos_actualizados_hoy(conn, movimientos):
     # Obtener saldos actuales de la BBDD
     saldos_actuales = obtener_saldos(conn)  # {usuario_id: saldo}
@@ -339,7 +359,7 @@ def obtener_saldos_actualizados_hoy(conn, movimientos):
         usuario_id = mov['usuario_id']
 
         if usuario_id not in saldos_actuales:
-            print(f"⚠ Usuario {usuario_id} no encontrado en BBDD, se omite.")
+            log_message(f"⚠ Usuario {usuario_id} no encontrado en BBDD, se omite.")
             continue
 
         saldo_inicial = saldos_actuales[usuario_id]
