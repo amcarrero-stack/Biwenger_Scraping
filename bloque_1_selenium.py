@@ -1,4 +1,4 @@
-from config import URL_BIWENGER_HOME, NOMBRE_MI_EQUIPO, URL_BIWENGER_LIGA
+from config import URL_BIWENGER_HOME, URL_BIWENGER_LIGA
 import time
 import locale
 from selenium.webdriver.common.by import By

@@ -10,14 +10,14 @@ from utils import print_usuarios
 # crear_tablas_si_no_existen(conn)
 # cerrar_BBDD(conn)
 
-# BORRAR USUARIOS
-conn = get_db_connection()
-borrar_todos_los_usuarios(conn)
-print_usuarios(obtener_userinfo_bbdd(conn))
-
-# BORRAR MOVIMIENTOS
-conn = get_db_connection()
-borrar_todos_los_movimientos(conn)
+# # BORRAR USUARIOS
+# conn = get_db_connection()
+# borrar_todos_los_usuarios(conn)
+# print_usuarios(obtener_userinfo_bbdd(conn))
+#
+# # BORRAR MOVIMIENTOS
+# conn = get_db_connection()
+# borrar_todos_los_movimientos(conn)
 
 
 # locale.setlocale(locale.LC_TIME, "C")  # Fuerza el formato inglés estándar
@@ -90,3 +90,5 @@ borrar_todos_los_movimientos(conn)
 # print(type(fecha_dt))
 
 # print("Antes:", locale.getlocale(locale.LC_TIME))
+
+print(Path(__file__).parent)

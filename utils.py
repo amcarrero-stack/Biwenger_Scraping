@@ -1,21 +1,15 @@
 from pathlib import Path
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
-from config import CARPETA_BBDD, CARPETA_RESULTADOS, CARPETA_LOGS, LOG_FILE, HTML_FILE, EXCEL_BBDD
-from datetime import datetime, date
+from config import CARPETA_LOGS, CHROMEDRIVER_PATH
+from datetime import datetime
 
-CHROMEDRIVER_PATH = r"C:\Users\Tito\Desktop\Biwenger_Scraping\chromedriver.exe"
-CHROME_PROFILE_PATH = r"C:\Users\Tito\AppData\Local\Google\Chrome\User Data"
-CHROME_PROFILE_NAME = "Default"
-
-def crear_driver():
-    #chromedriver_autoinstaller.install()
-
+def crear_driver(logFilePath):
     options = Options()
     options.add_argument("--start-maximized")
 
     try:
-        log_message("🟡 Iniciando Chrome con perfil de usuario...")
+        log_message(logFilePath, "🟡 Iniciando Chrome con perfil de usuario...")
 
         if not Path(CHROMEDRIVER_PATH).exists():
             raise FileNotFoundError(f"❌ Chromedriver no encontrado en {CHROMEDRIVER_PATH}")
@@ -23,47 +17,31 @@ def crear_driver():
         driver = webdriver.Chrome(options=options)
         # driver = webdriver.Chrome()
 
-        log_message("🟢 Chrome iniciado correctamente.")
+        log_message(logFilePath, "🟢 Chrome iniciado correctamente.")
         return driver
     except Exception as e:
-        log_message(f"❌ Error al crear el driver de Chrome: {e}")
+        log_message(logFilePath, f"❌ Error al crear el driver de Chrome: {e}")
         raise e
 def ensure_directories_exist():
-    for carpeta in [CARPETA_BBDD, CARPETA_RESULTADOS, CARPETA_LOGS]:
+    for carpeta in [CARPETA_LOGS]:
         carpeta.mkdir(parents=True, exist_ok=True)
 
-def get_excel_path():
-    return EXCEL_BBDD
+def iniciar_log():
+    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    logFilePath = CARPETA_LOGS / f"Biwenger_log_{timestamp}.log"
+    return logFilePath
 
-def log_message(message):
-    ensure_directories_exist()
-    timestamp_file = obtener_timestamp_actual("%Y-%m-%d_%H-%M-%S")
-    log_file = LOG_FILE(timestamp_file)
+def log_message(logFilePath, message):
+    if logFilePath is None:
+        raise RuntimeError("El log no ha sido iniciado. Llama a iniciar_log() primero.")
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     line = f"[{timestamp}] {message}\n"
     print(line.strip())
-    with open(log_file, "a", encoding="utf-8") as f:
+    with open(logFilePath, "a", encoding="utf-8") as f:
         f.write(line)
-
-def get_html_path():
-    timestamp_file = obtener_timestamp_actual("%Y-%m-%d_%H-%M-%S")
-    return HTML_FILE(timestamp_file)
 
 def obtener_timestamp_actual(formato="%Y-%m-%d_%H-%M-%S"):
     return datetime.now().strftime(formato)
-
-def formatear_fecha_biwenger(fecha_str):
-    from datetime import datetime
-    import locale
-    try:
-        locale.setlocale(locale.LC_TIME, "es_ES.UTF-8")
-    except:
-        locale.setlocale(locale.LC_TIME, "es_ES")
-    try:
-        return datetime.strptime(fecha_str, "%d %b %Y, %H:%M:%S")
-    except Exception as e:
-        log_message(f"Error al parsear fecha '{fecha_str}': {e}")
-        return None
 
 def traducir_mes(mes_es):
     traducciones = {
