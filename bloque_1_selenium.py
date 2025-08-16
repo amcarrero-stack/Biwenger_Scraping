@@ -4,6 +4,9 @@ import locale
 from selenium.webdriver.common.by import By
 from datetime import datetime, date
 from collections import Counter
+from bloque_bbdd import get_db_connection, obtener_userId
+from utils import traducir_mes
+import os
 
 def do_login(driver):
     driver.get(URL_BIWENGER_HOME)
@@ -41,29 +44,27 @@ def do_obtener_usuarios(driver):
             href = enlace.get_attribute("href")
             num_jug = card.find_element(By.CSS_SELECTOR, "div.main h4").text.split(' jug.')[0]
 
-            if nombre != NOMBRE_MI_EQUIPO:
-                usuario = {
-                    "name": nombre,
-                    "url_name": href,
-                    "num_jug": int(num_jug)
-                }
-                usuarios.append(usuario)
+            usuario = {
+                "name": nombre,
+                "url_name": href,
+                "num_jug": int(num_jug)
+            }
+            usuarios.append(usuario)
         except:
             continue  # Por si algún user-card no tiene nombre o el selector falla
     print(usuarios)
     return usuarios
 
-def get_posts_until_date(driver, modification_date):
+def get_posts_until_date(driver, cutoff_datetime):
     locale.setlocale(locale.LC_TIME, "C")
     print('entra en get_posts_until_date')
     driver.get(URL_BIWENGER_HOME)
-    fecha_str_traducida = traducir_mes(modification_date)
-    cutoff_datetime = datetime.strptime(fecha_str_traducida, "%d %b %Y")
     last_height = driver.execute_script("return document.body.scrollHeight")
-    postToOld = []
-    while True:
+    repetir = True
+    postToRet = []
+    while repetir:
         time.sleep(1)
-        all_posts = cleanPosts(driver.find_elements(By.CSS_SELECTOR, 'league-board-post'))
+        all_posts = driver.find_elements(By.CSS_SELECTOR, 'league-board-post')
         print(f'all_posts len es: {len(all_posts)}')
         postToRet = []
         for post in all_posts:
@@ -73,15 +74,13 @@ def get_posts_until_date(driver, modification_date):
                 if not date_str:
                     continue
                 fecha_str_traducida = traducir_mes(date_str)
-                post_datetime = datetime.strptime(fecha_str_traducida, "%d %b %Y")
-                is_a_valid_post = check_league_board_post(post)
+                post_datetime = datetime.strptime(fecha_str_traducida, "%d %b %Y").date()
 
-                if not is_a_valid_post and post_datetime >= cutoff_datetime:
-                    continue
-                elif post_datetime >= cutoff_datetime:
+                if is_a_valid_post(post) and post_datetime < cutoff_datetime:
+                    repetir = False
+                    break
+                if is_a_valid_post(post):
                     postToRet.append(post)
-                else:
-                    return postToRet
 
             except Exception:
                 continue
@@ -94,78 +93,76 @@ def get_posts_until_date(driver, modification_date):
             # Ya no hay más contenido para cargar
             break
         last_height = new_height
-    return postToOld
+    return postToRet
 
-def cleanPosts(all_posts):
-    hoy = date.today()
-    firstIteration = True
+def get_posts_until_date_mock(driver, cutoff_datetime):
+    locale.setlocale(locale.LC_TIME, "C")
+    html_file = os.path.abspath("mock.html")
+    driver.get("file://" + html_file)
     postToRet = []
+
+    all_posts = driver.find_elements(By.CSS_SELECTOR, 'league-board-post')
+    print(f'all_posts len es: {len(all_posts)}')
     for post in all_posts:
         try:
             date_elem = post.find_element(By.CSS_SELECTOR, "div.date")
             date_str = date_elem.get_attribute("title").split(',')[0]  # Ej: "29 jul 2025, 13:37:05"
+            if not date_str:
+                continue
             fecha_str_traducida = traducir_mes(date_str)
-            post_datetime = datetime.strptime(fecha_str_traducida, "%d %b %Y")
-            post_date = post_datetime.date()
+            post_datetime = datetime.strptime(fecha_str_traducida, "%d %b %Y").date()
 
-            if firstIteration:
-                if post_date < hoy:
-                    continue
-                else:
-                    firstIteration = False
-                    postToRet.append(post)
-                    continue
-            else:
+            if is_a_valid_post(post) and post_datetime < cutoff_datetime:
+                break
+            if is_a_valid_post(post):
                 postToRet.append(post)
-        except Exception as e:
-            print(f"⚠️ Excepcion en cleanPosts")
-
+        except Exception:
+            continue
     return postToRet
 
-def check_league_board_post(league_board_post):
+def is_a_valid_post(league_board_post):
     try:
         header_div = league_board_post.find_element(By.CSS_SELECTOR, "div.header.ng-star-inserted")
         h3_element = header_div.find_element(By.TAG_NAME, "h3")
         cardName = h3_element.text.strip()
-        return cardName == 'MERCADO DE FICHAJES' or cardName == 'FICHAJES' or cardName == 'CAMBIO DE NOMBRE' or cardName == 'CLÁUSULAS' or cardName == 'ABONOS Y PENALIZACIONES'
+        return cardName == 'MERCADO DE FICHAJES' or cardName == 'FICHAJES' or cardName == 'CAMBIO DE NOMBRE' or cardName == 'CLÁUSULAS' or cardName == 'ABONOS Y PENALIZACIONES' or cardName == 'MOVIMIENTO DE JUGADORES'
     except Exception as e:
         print(f"⚠️ No se pudo encontrar el h3 esperado")
 
-def traducir_mes(mes_es):
-    traducciones = {
-        "ene": "Jan", "feb": "Feb", "mar": "Mar", "abr": "Apr",
-        "may": "May", "jun": "Jun", "jul": "Jul", "ago": "Aug",
-        "sep": "Sep", "oct": "Oct", "nov": "Nov", "dic": "Dec"
-    }
-    for esp, eng in traducciones.items():
-        mes_es = mes_es.replace(f" {esp} ", f" {eng} ")
-    return mes_es
-def mostrar_texto_h3(posts):
+def obtenerMovimientos(posts):
+    movimientos_to_insert = []
+    conn = get_db_connection()
+    user_dict = obtener_userId(conn)
     for i, post in enumerate(posts, start=1):
-        # output_json = html_to_json.convert(post)
-        # print(f'output_json es: {cardName}')
         try:
             header_div = post.find_element(By.CSS_SELECTOR, "div.header.ng-star-inserted")
             h3_element = header_div.find_element(By.TAG_NAME, "h3")
             date_elem = header_div.find_element(By.CSS_SELECTOR, "div.date")
             date_str = date_elem.get_attribute("title").split(',')[0]
+            fecha_str_traducida = traducir_mes(date_str)
+            post_datetime = datetime.strptime(fecha_str_traducida, "%d %b %Y").date()
 
             cardName = h3_element.text.strip()
             # print(f'{cardName} ({date_str})')
             if cardName == 'MERCADO DE FICHAJES':
-                print(f"\n📌 Post {i}:")
-                print(f"   - {h3_element.text.strip()} ({date_str})")
-                merc_fichajes_div = post.find_element(By.CSS_SELECTOR, "div.content.market")
-                fichajes = merc_fichajes_div.find_elements(By.TAG_NAME, 'li')
-                for fichaje in fichajes:
-                    fichajeH3 = fichaje.find_element(By.TAG_NAME, "h3")
-                    fichajeName = fichajeH3.text.strip()
-                    userlink = fichaje.find_element(By.TAG_NAME, 'user-link')
-                    userName = userlink.find_element(By.TAG_NAME, 'a').text.strip()
-                    valorCompraStr = fichaje.find_element(By.TAG_NAME, 'strong').text.strip()
-                    valor_limpio = valorCompraStr.replace('.', '').replace('€', '').replace(' ', '')
-                    valorCompra = int(valor_limpio)
-                    print(f"      - {fichajeName}: Comprado por {userName} por {valorCompra} €")
+                try:
+                    print(f"\n📌 Post {i}:")
+                    print(f"   - {h3_element.text.strip()} ({date_str})")
+                    merc_fichajes_div = post.find_element(By.CSS_SELECTOR, "div.content.market")
+                    fichajes = merc_fichajes_div.find_elements(By.TAG_NAME, 'li')
+                    for fichaje in fichajes:
+                        fichajeH3 = fichaje.find_element(By.TAG_NAME, "h3")
+                        fichajeName = fichajeH3.text.strip()
+                        userlink = fichaje.find_element(By.TAG_NAME, 'user-link')
+                        userName = userlink.find_element(By.TAG_NAME, 'a').text.strip()
+                        valorCompraStr = fichaje.find_element(By.TAG_NAME, 'strong').text.strip()
+                        valor_limpio = valorCompraStr.replace('.', '').replace('€', '').replace(' ', '')
+                        valorCompra = int(valor_limpio)
+                        print(f"      - {fichajeName}: Comprado por {userName} por {valorCompra} €")
+                        movimiento = {"usuario_id": user_dict[userName], "tipo":"fichaje", "jugador": fichajeName, "cantidad": -valorCompra, "fecha": str(post_datetime)}
+                        movimientos_to_insert.append(movimiento)
+                except Exception as e:
+                    print(f"   ⚠️ Excepcion en MERCADO DE FICHAJES: {e}")
             elif cardName == 'FICHAJES':
                 try:
                     print(f"\n📌 Post {i}:")
@@ -181,6 +178,8 @@ def mostrar_texto_h3(posts):
                             valor_limpio = valorVentaStr.replace('.', '').replace('€', '').replace(' ', '')
                             valorVenta = int(valor_limpio)
                             print(f"      - {jugadorName}: Vendido por {userName} a Mercado por {valorVenta} €")
+                            movimiento = {"usuario_id": user_dict[userName], "tipo":"venta", "jugador": jugadorName, "cantidad": valorVenta, "fecha": str(post_datetime)}
+                            movimientos_to_insert.append(movimiento)
                     else:
                         content_transfer_div = post.find_element(By.CSS_SELECTOR, "div.content.transfer")
                         jugadores_transferidos = content_transfer_div.find_elements(By.TAG_NAME, 'li')
@@ -194,6 +193,12 @@ def mostrar_texto_h3(posts):
                             valor_limpio = valorVentaStr.replace('.', '').replace('€', '').replace(' ', '')
                             valor = int(valor_limpio)
                             print(f"      - {jugadorName}: Vendido por {userNameVenta} a {userNameCompra} por {valor} €")
+
+                            movimientoVenta = {"usuario_id": user_dict[userNameVenta], "tipo": "venta", "jugador": jugadorName, "cantidad": valor, "fecha": str(post_datetime)}
+                            movimientos_to_insert.append(movimientoVenta)
+                            if userNameCompra.lower() != 'mercado':
+                                movimientoCompra = {"usuario_id": user_dict[userNameCompra], "tipo": "fichaje", "jugador": jugadorName, "cantidad": -valor, "fecha": str(post_datetime)}
+                                movimientos_to_insert.append(movimientoCompra)
 
                 except Exception as e:
                     print(f"   ⚠️ Excepcion en FICHAJES: {e}")
@@ -221,7 +226,10 @@ def mostrar_texto_h3(posts):
                         valor_limpio = valorVentaStr.replace('.', '').replace('€', '').replace(' ', '')
                         valor = int(valor_limpio)
                         print(f"      - {userNameCompra} ha pagado la clausula de {fichajeName} a {userNameVenta} por {valor} €")
-
+                        movimientoVenta = {"usuario_id": user_dict[userNameCompra], "tipo": "fichaje", "jugador": fichajeName, "cantidad": -valor, "fecha": str(post_datetime)}
+                        movimientos_to_insert.append(movimientoVenta)
+                        movimientoCompra = {"usuario_id": user_dict[userNameVenta], "tipo": "clausulazo", "jugador": fichajeName, "cantidad": valor, "fecha": str(post_datetime)}
+                        movimientos_to_insert.append(movimientoCompra)
                 except Exception as e:
                     print(f"   ⚠️ Excepcion en FICHAJES: {e}")
             elif cardName == 'ABONOS Y PENALIZACIONES':
@@ -237,10 +245,13 @@ def mostrar_texto_h3(posts):
                         valor_limpio = decrement.replace('.', '').replace('€', '').replace(' ', '')
                         valor = int(valor_limpio)
                         print(f"      - {userName} ha sido penalizado por el administrador con {valor} €")
+                        movimientoPenalizacion = {"usuario_id": user_dict[userName], "tipo": "penalizacion", "jugador": "", "cantidad": -valor, "fecha": str(post_datetime)}
+                        movimientos_to_insert.append(movimientoPenalizacion)
                 except Exception as e:
                     print(f"   ⚠️ Excepcion en FICHAJES: {e}")
         except Exception as e:
             print(f"   ⚠️ No se pudo encontrar el h3 esperado: {e}")
+    return movimientos_to_insert
 
 def obtener_ventas_y_compras(posts):
     resumen_usuarios = {}

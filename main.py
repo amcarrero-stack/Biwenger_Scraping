@@ -3,9 +3,8 @@ from datetime import datetime, timedelta
 
 from config import URL_BIWENGER_HOME, NOMBRE_MI_EQUIPO, URL_BIWENGER_LIGA
 from utils import log_message, crear_driver
-from bloque_1_selenium import get_posts_until_date, mostrar_texto_h3, obtener_ventas_y_compras
-from bloque_1_selenium import do_login, do_obtener_usuarios
-from bloque_bbdd import get_db_connection, crear_tablas_si_no_existen, cerrar_BBDD, insertar_usuarios, obtener_usuarios, print_usuarios, actualizar_saldos
+from bloque_1_selenium import get_posts_until_date, get_posts_until_date_mock, obtenerMovimientos, obtener_ventas_y_compras, do_login, do_obtener_usuarios
+from bloque_bbdd import *
 import traceback
 
 def main():
@@ -20,20 +19,40 @@ def main():
         do_login(driver)
         # input("🔒 Inicia sesión (si no lo estás) y pulsa Enter para continuar...")
         usuarios_actuales = do_obtener_usuarios(driver)
-        print(f"Usuarios detectados (excluyendo {NOMBRE_MI_EQUIPO}): {[u['name'] for u in usuarios_actuales]}")
-        usuarios_db = obtener_usuarios(conn)
+        print(f"Usuarios detectados: {[u['name'] for u in usuarios_actuales]}")
+        usuarios_db = obtener_userinfo_bbdd(conn)
         if not usuarios_db:
             insertar_usuarios(conn, usuarios_actuales)
-            usuarios_db = obtener_usuarios(conn)
-        modification_date = str(usuarios_db[0][5]).strip()
+            usuarios_db = obtener_userinfo_bbdd(conn)
+        modification_date = usuarios_db[0][5]
+        user_dict = obtener_userId(conn)
         print(f'modification_date es {modification_date}')
-        print_usuarios(obtener_usuarios(conn))
+        print_usuarios(obtener_userinfo_bbdd(conn))
+        movimientos_hoy = obtener_movimientos_hoy(conn)
+        if movimientos_hoy:
+            resumen_movimientos = obtener_resumen_movimientos(conn, user_dict, modification_date)
+            print(resumen_movimientos)
+            saldos_actualizados = obtener_saldos_actualizados_hoy(conn, resumen_movimientos)
+            print(saldos_actualizados)
+            actualizar_saldos_new(conn, saldos_actualizados)
+            delete_movimientos(conn, movimientos_hoy)
+
         posts = get_posts_until_date(driver, modification_date)
+        # posts = get_posts_until_date_mock(driver, modification_date)
         print(f"Se han recogido {len(posts)} movimientos hasta {modification_date}")
-        mostrar_texto_h3(posts)
-        compras_y_ventas = obtener_ventas_y_compras(posts)
-        print(compras_y_ventas)
-        actualizar_saldos(conn, compras_y_ventas)
+        movimientos_to_insert = obtenerMovimientos(posts)
+        print(f"movimientos_to_insert es {movimientos_to_insert}")
+        insertar_varios('movimientos', movimientos_to_insert)
+
+        # compras_y_ventas = obtener_ventas_y_compras(posts)
+        # print(compras_y_ventas)
+
+        resumen_movimientos = obtener_resumen_movimientos(conn, user_dict, modification_date)
+        print(resumen_movimientos)
+        saldos_actualizados = obtener_saldos_actualizados(conn, resumen_movimientos)
+        print(saldos_actualizados)
+        actualizar_saldos_new(conn, saldos_actualizados)
+        actualizar_num_jugadores(conn, usuarios_actuales)
         cerrar_BBDD(conn)
 
     except Exception as e:

@@ -25,6 +25,11 @@ def crear_driver():
     # options.add_argument("--disable-dev-shm-usage")
     # options.add_experimental_option("detach", True)
     options.add_argument("--start-maximized")
+
+    # options.add_argument("--headless=new")  # o "--headless"
+    # options.add_argument("--disable-gpu")
+    # options.add_argument("--window-size=1920,1080")
+
     try:
         log_message("🟡 Iniciando Chrome con perfil de usuario...")
 
@@ -76,3 +81,12 @@ def formatear_fecha_biwenger(fecha_str):
         log_message(f"Error al parsear fecha '{fecha_str}': {e}")
         return None
 
+def traducir_mes(mes_es):
+    traducciones = {
+        "ene": "Jan", "feb": "Feb", "mar": "Mar", "abr": "Apr",
+        "may": "May", "jun": "Jun", "jul": "Jul", "ago": "Aug",
+        "sep": "Sep", "oct": "Oct", "nov": "Nov", "dic": "Dec"
+    }
+    for esp, eng in traducciones.items():
+        mes_es = mes_es.replace(f" {esp} ", f" {eng} ")
+    return mes_es
