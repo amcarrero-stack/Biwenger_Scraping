@@ -5,18 +5,18 @@ from datetime import datetime, date
 from bloque_1_selenium import traducir_mes
 
 #crear tablas si no existen
-conn = get_db_connection()
-crear_tablas_si_no_existen(conn)
-cerrar_BBDD(conn)
+# conn = get_db_connection()
+# crear_tablas_si_no_existen(conn)
+# cerrar_BBDD(conn)
 
-# # BORRAR USUARIOS
-# conn = get_db_connection()
-# borrar_todos_los_usuarios(conn)
-# print_usuarios(obtener_userinfo_bbdd(conn))
-#
-# # BORRAR MOVIMIENTOS
-# conn = get_db_connection()
-# borrar_todos_los_movimientos(conn)
+# BORRAR USUARIOS
+conn = get_db_connection()
+borrar_todos_los_usuarios(conn)
+print_usuarios(obtener_userinfo_bbdd(conn))
+
+# BORRAR MOVIMIENTOS
+conn = get_db_connection()
+borrar_todos_los_movimientos(conn)
 
 
 # locale.setlocale(locale.LC_TIME, "C")  # Fuerza el formato inglés estándar
@@ -39,13 +39,14 @@ cerrar_BBDD(conn)
 #     conn,
 #     "usuarios",
 #     [
-#         {"name": "Juanjo", "modificationDate": "11 ago 2025"},
-#         {"name": "David", "modificationDate": "11 ago 2025"},
-#         {"name": "Jaime Palomino Cano", "modificationDate": "11 ago 2025"},
-#         {"name": "Al-khelaifi", "modificationDate": "11 ago 2025"},
-#         {"name": "Yyoquese", "modificationDate": "11 ago 2025"},
-#         {"name": "Mast-antonio", "modificationDate": "11 ago 2025"},
-#         {"name": "Bellingham5", "modificationDate": "11 ago 2025"}
+#         {"id": "Juanjo", "modificationDate": "11 ago 2025"},
+#         {"id": "David", "modificationDate": "11 ago 2025"},
+#         {"id": "Jaime Palomino Cano", "modificationDate": "11 ago 2025"},
+#         {"id": "Al-khelaifi", "modificationDate": "11 ago 2025"},
+#         {"id": "Yyoquese", "modificationDate": "11 ago 2025"},
+#         {"id": "Mast-antonio", "modificationDate": "11 ago 2025"},
+#         {"id": "Bellingham5", "modificationDate": "11 ago 2025"},
+#         {"id": "Bellingham5", "modificationDate": "11 ago 2025"}
 #     ],
 #     condicion_campo="name"
 # )
@@ -86,3 +87,5 @@ cerrar_BBDD(conn)
 #
 # print(fecha_dt)
 # print(type(fecha_dt))
+
+# print("Antes:", locale.getlocale(locale.LC_TIME))

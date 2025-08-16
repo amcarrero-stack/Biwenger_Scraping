@@ -1,9 +1,5 @@
-import time
-from datetime import datetime, timedelta
-
-from config import URL_BIWENGER_HOME, NOMBRE_MI_EQUIPO, URL_BIWENGER_LIGA
 from utils import log_message, crear_driver
-from bloque_1_selenium import get_posts_until_date, get_posts_until_date_mock, obtenerMovimientos, obtener_ventas_y_compras, do_login, do_obtener_usuarios
+from bloque_1_selenium import get_posts_until_date, obtenerMovimientos, do_login, do_obtener_usuarios
 from bloque_bbdd import *
 import traceback
 
@@ -38,14 +34,10 @@ def main():
             delete_movimientos(conn, movimientos_hoy)
 
         posts = get_posts_until_date(driver, modification_date)
-        # posts = get_posts_until_date_mock(driver, modification_date)
         print(f"Se han recogido {len(posts)} movimientos hasta {modification_date}")
         movimientos_to_insert = obtenerMovimientos(posts)
         print(f"movimientos_to_insert es {movimientos_to_insert}")
         insertar_varios('movimientos', movimientos_to_insert)
-
-        # compras_y_ventas = obtener_ventas_y_compras(posts)
-        # print(compras_y_ventas)
 
         resumen_movimientos = obtener_resumen_movimientos(conn, user_dict, modification_date)
         print(resumen_movimientos)

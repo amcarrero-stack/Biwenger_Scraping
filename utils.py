@@ -1,12 +1,8 @@
-import time
-import html_to_json
 from pathlib import Path
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from config import CARPETA_BBDD, CARPETA_RESULTADOS, CARPETA_LOGS, LOG_FILE, HTML_FILE, EXCEL_BBDD
-from selenium.webdriver.common.by import By
 from datetime import datetime, date
-from collections import Counter
 
 CHROMEDRIVER_PATH = r"C:\Users\Tito\Desktop\Biwenger_Scraping\chromedriver.exe"
 CHROME_PROFILE_PATH = r"C:\Users\Tito\AppData\Local\Google\Chrome\User Data"
@@ -16,19 +12,7 @@ def crear_driver():
     #chromedriver_autoinstaller.install()
 
     options = Options()
-    # options.add_argument(f"--user-data-dir={CHROME_PROFILE_PATH}")
-    # options.add_argument(f"--profile-directory={CHROME_PROFILE_NAME}")
-    # options.add_argument("--start-maximized")
-    # options.add_argument("--disable-extensions")
-    # options.add_argument("--disable-gpu")
-    # options.add_argument("--no-sandbox")
-    # options.add_argument("--disable-dev-shm-usage")
-    # options.add_experimental_option("detach", True)
     options.add_argument("--start-maximized")
-
-    # options.add_argument("--headless=new")  # o "--headless"
-    # options.add_argument("--disable-gpu")
-    # options.add_argument("--window-size=1920,1080")
 
     try:
         log_message("🟡 Iniciando Chrome con perfil de usuario...")

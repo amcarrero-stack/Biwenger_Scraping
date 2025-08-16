@@ -4,8 +4,7 @@ from datetime import datetime
 import locale
 from utils import traducir_mes
 
-# Asegúrate de establecer el locale en español para los nombres de los meses
-locale.setlocale(locale.LC_TIME, 'es_ES.UTF-8')  # En Windows puede ser 'Spanish_Spain'
+locale.setlocale(locale.LC_TIME, "C")
 
 RUTA_BASE = Path(__file__).parent
 DB_PATH = RUTA_BASE / "BBDD" / "biwenger.db"
@@ -18,17 +17,17 @@ def get_db_connection():
 
 def crear_tablas_si_no_existen(conn):
     cursor = conn.cursor()
-    # cursor.execute('''
-    #     CREATE TABLE IF NOT EXISTS usuarios (
-    #         id INTEGER PRIMARY KEY AUTOINCREMENT,
-    #         name TEXT UNIQUE NOT NULL,
-    #         url_name TEXT UNIQUE NOT NULL,
-    #         saldo INTEGER NOT NULL,
-    #         saldo_anterior INTEGER NOT NULL,
-    #         num_jugadores INTEGER,
-    #         modificationDate DATE
-    #     )
-    # ''')
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS usuarios (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT UNIQUE NOT NULL,
+            url_name TEXT UNIQUE NOT NULL,
+            saldo INTEGER NOT NULL,
+            saldo_anterior INTEGER NOT NULL,
+            num_jugadores INTEGER,
+            modificationDate DATE
+        )
+    ''')
 
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS usuarios_historial (
@@ -42,18 +41,18 @@ def crear_tablas_si_no_existen(conn):
         )
     ''')
 
-    # cursor.execute('''
-    #     CREATE TABLE IF NOT EXISTS movimientos (
-    #         id INTEGER PRIMARY KEY AUTOINCREMENT,
-    #         usuario_id INTEGER NOT NULL,
-    #         tipo TEXT CHECK(tipo IN ('fichaje', 'venta', 'clausulazo', 'abono', 'penalizacion')),
-    #         jugador TEXT,
-    #         cantidad REAL,
-    #         fecha DATE,
-    #         FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
-    #     )
-    # ''')
-    # conn.commit()
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS movimientos (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            usuario_id INTEGER NOT NULL,
+            tipo TEXT CHECK(tipo IN ('fichaje', 'venta', 'clausulazo', 'abono', 'penalizacion')),
+            jugador TEXT,
+            cantidad REAL,
+            fecha DATE,
+            FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
+        )
+    ''')
+    conn.commit()
 
 # Insertar un usuario
 def insertar_usuarios(conn, usuarios):
@@ -156,49 +155,9 @@ def print_usuarios(usuarios):
 def cerrar_BBDD(conn):
     conn.close()
 
-def actualizar_saldos(conn, movimientos):
-    """
-    Actualiza el saldo y modificationDate de cada usuario según los movimientos.
-
-    :param conn: conexión a la base de datos SQLite.
-    :param movimientos: lista de diccionarios con username, compras y ventas.
-    """
-    cursor = conn.cursor()
-
-    # Obtener la fecha actual en formato "5 ago 2025"
-    locale.setlocale(locale.LC_TIME, "es_ES.UTF-8")
-    fecha_hoy = datetime.today()
-    fecha_formateada = fecha_hoy.strftime("%d %b %Y").replace('.', '')
-
-    for mov in movimientos:
-        username = mov['username']
-        compras = mov.get('compras', 0)
-        ventas = mov.get('ventas', 0)
-        penalizaciones = mov.get('penalizaciones', 0)
-
-        # Obtener el saldo actual
-        cursor.execute("SELECT saldo FROM usuarios WHERE name = ?", (username,))
-        resultado = cursor.fetchone()
-
-        if resultado:
-            saldo_actual = resultado[0]
-            saldo_nuevo = saldo_actual - compras + ventas - penalizaciones
-
-            # Actualizar saldo y fecha
-            cursor.execute(
-                "UPDATE usuarios SET saldo = ?, modificationDate = ? WHERE name = ?",
-                (saldo_nuevo, fecha_formateada, username)
-            )
-        else:
-            print(f"⚠️ Usuario '{username}' no encontrado en la tabla usuarios.")
-
-    conn.commit()
-    print("✅ Saldos y fechas actualizados correctamente.")
-
 def actualizar_saldos_new(conn, nuevos_saldos):
     cursor = conn.cursor()
     # Obtener la fecha actual en formato "5 ago 2025"
-    locale.setlocale(locale.LC_TIME, "es_ES.UTF-8")
     fecha_hoy = datetime.today().date()
     saldos_actuales_by_userId = obtener_saldos(conn)
 
@@ -352,56 +311,6 @@ def obtener_resumen_movimientos(conn, user_dict, fecha_inicio_str):
         resultados.append(resumen)
 
     return resultados
-
-
-def obtener_resumen_movimientos_desde_ultima_actualizacion(conn, fecha_inicio_str):
-    cursor = conn.cursor()
-    resultados = []
-    locale.setlocale(locale.LC_TIME, "es_ES.UTF-8")
-    fecha_hoy = datetime.today()
-    fecha_formateada = fecha_hoy.strftime("%d %b %Y").replace('.', '')
-    user_dict = obtener_userId(conn)
-
-    for nombre, user_id in user_dict.items():
-        resumen = {'usuario_id': user_id}
-
-        # Ventas
-        cursor.execute("""
-            SELECT COALESCE(SUM(cantidad), 0)
-            FROM movimientos
-            WHERE usuario_id = ? AND tipo = 'venta' AND fecha = ?
-        """, (user_id, fecha_formateada))
-        resumen['ventas'] = cursor.fetchone()[0]
-
-        # Fichajes
-        cursor.execute("""
-            SELECT COALESCE(SUM(cantidad), 0)
-            FROM movimientos
-            WHERE usuario_id = ? AND tipo = 'fichaje' AND fecha = ?
-        """, (user_id, fecha_formateada))
-        resumen['fichajes'] = cursor.fetchone()[0]
-
-        # Penalizaciones
-        cursor.execute("""
-            SELECT COALESCE(SUM(cantidad), 0)
-            FROM movimientos
-            WHERE usuario_id = ? AND tipo = 'penalizacion' AND fecha = ?
-        """, (user_id, fecha_formateada))
-        resumen['penalizaciones'] = cursor.fetchone()[0]
-
-        # Clausulazos
-        cursor.execute("""
-            SELECT COALESCE(SUM(cantidad), 0)
-            FROM movimientos
-            WHERE usuario_id = ? AND tipo = 'clausulazo' AND fecha = ?
-        """, (user_id, fecha_formateada))
-        resumen['clausulazos'] = cursor.fetchone()[0]
-
-        resultados.append(resumen)
-
-    return resultados
-
-
 def obtener_saldos_actualizados(conn, movimientos):
     # Obtener saldos actuales de la BBDD
     saldos_actuales = obtener_saldos(conn)  # {usuario_id: saldo}
