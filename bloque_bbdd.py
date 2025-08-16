@@ -148,10 +148,6 @@ def delete_movimientos(conn, movimientos):
         cursor.execute("DELETE FROM movimientos WHERE id = ?", (mov[0],))
     conn.commit()
 
-def print_usuarios(usuarios):
-    for usuario in usuarios:
-        print(f"ID: {usuario[0]}, Nombre: {usuario[1]}, Saldo: {usuario[2]}, URL Name: {usuario[3]}, Jugadores: {usuario[4]}, Fecha: {usuario[5]}")
-
 def cerrar_BBDD(conn):
     conn.close()
 
@@ -249,17 +245,12 @@ def insertar_registro(conn, tabla, valores):
     cursor.execute(query, list(valores.values()))
     conn.commit()
 
-def insertar_varios(tabla, lista_valores):
+def insertar_varios(conn, tabla, lista_valores):
     """
     Inserta varios registros en la tabla a partir de una lista de diccionarios.
     """
-    conn = get_db_connection()
     for item in lista_valores:
         insertar_registro(conn, tabla, item)
-    cerrar_BBDD(conn)
-
-import locale
-from datetime import datetime
 
 def obtener_resumen_movimientos(conn, user_dict, fecha_inicio_str):
     cursor = conn.cursor()

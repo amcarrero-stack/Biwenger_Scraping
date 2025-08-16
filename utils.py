@@ -74,3 +74,7 @@ def traducir_mes(mes_es):
     for esp, eng in traducciones.items():
         mes_es = mes_es.replace(f" {esp} ", f" {eng} ")
     return mes_es
+
+def print_usuarios(usuarios):
+    for usuario in usuarios:
+        print(f"ID: {usuario[0]}, Nombre: {usuario[1]}, Saldo: {usuario[2]}, URL Name: {usuario[3]}, Jugadores: {usuario[4]}, Fecha: {usuario[5]}")

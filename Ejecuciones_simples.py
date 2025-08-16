@@ -3,6 +3,7 @@ from bloque_bbdd import *
 import locale
 from datetime import datetime, date
 from bloque_1_selenium import traducir_mes
+from utils import print_usuarios
 
 #crear tablas si no existen
 # conn = get_db_connection()
