@@ -7,7 +7,7 @@ from utils import traducir_mes, log_message
 locale.setlocale(locale.LC_TIME, "C")
 
 RUTA_BASE = Path(__file__).parent
-DB_PATH = RUTA_BASE / "BBDD" / "biwenger.db"
+DB_PATH = RUTA_BASE / "BBDD" / "biwenger_bbdd.db"
 
 def get_db_connection():
     if not DB_PATH.parent.exists():
