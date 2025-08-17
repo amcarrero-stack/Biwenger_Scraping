@@ -35,23 +35,25 @@ from utils import print_usuarios
 # print(fecha_formateada)
 
 # ACTUALIZAR DATOS DE LA TABLA
-# conn = get_db_connection()
-# actualizar_varios(
-#     conn,
-#     "usuarios",
-#     [
-#         {"id": "Juanjo", "modificationDate": "11 ago 2025"},
-#         {"id": "David", "modificationDate": "11 ago 2025"},
-#         {"id": "Jaime Palomino Cano", "modificationDate": "11 ago 2025"},
-#         {"id": "Al-khelaifi", "modificationDate": "11 ago 2025"},
-#         {"id": "Yyoquese", "modificationDate": "11 ago 2025"},
-#         {"id": "Mast-antonio", "modificationDate": "11 ago 2025"},
-#         {"id": "Bellingham5", "modificationDate": "11 ago 2025"},
-#         {"id": "Bellingham5", "modificationDate": "11 ago 2025"}
-#     ],
-#     condicion_campo="name"
-# )
-# cerrar_BBDD(conn)
+conn = get_db_connection()
+datos_to_update = [
+    {"id": 17, "modificationDate": "2025-08-16", "saldo": -3039410, "num_jugadores": 13},
+    {"id": 18, "modificationDate": "2025-08-16", "saldo": 2447900, "num_jugadores": 11},
+    {"id": 19, "modificationDate": "2025-08-16", "saldo": 53350, "num_jugadores": 11},
+    {"id": 20, "modificationDate": "2025-08-16", "saldo": 140150, "num_jugadores": 11},
+    {"id": 21, "modificationDate": "2025-08-16", "saldo": -2332740, "num_jugadores": 12},
+    {"id": 22, "modificationDate": "2025-08-16", "saldo": -1847210, "num_jugadores": 11},
+    {"id": 23, "modificationDate": "2025-08-16", "saldo": 187902, "num_jugadores": 12},
+    {"id": 24, "modificationDate": "2025-08-16", "saldo": -2883008, "num_jugadores": 13}
+]
+
+actualizar_varios(
+    conn,
+    "usuarios",
+    datos_to_update,
+    condicion_campo="id"
+)
+cerrar_BBDD(conn)
 
 # INSERTA DATOS EN UNA TABLA
 # movimientos_realizados = [
@@ -91,4 +93,4 @@ from utils import print_usuarios
 
 # print("Antes:", locale.getlocale(locale.LC_TIME))
 
-print(Path(__file__).parent)
+# print(Path(__file__).parent)
