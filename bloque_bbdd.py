@@ -2,7 +2,7 @@ import sqlite3
 from pathlib import Path
 from datetime import datetime
 import locale
-from utils import traducir_mes, log_message
+from utils import traducir_mes, log_message, log_message_with_print
 
 locale.setlocale(locale.LC_TIME, "C")
 
@@ -56,17 +56,15 @@ def crear_tablas_si_no_existen(conn):
 
 # Insertar un usuario
 def insertar_usuarios(conn, usuarios):
-    cursor = conn.cursor()
     locale.setlocale(locale.LC_TIME, "C")
+    cursor = conn.cursor()
     for user in usuarios:
         name = user['name']
         url_name = user['url_name']
         num_jugadores = user['num_jug']
 
-        fecha_inicio_str = "1 ago 2025"
-        fecha_str_traducida = traducir_mes(fecha_inicio_str)
-        fecha_inicio_datetime = datetime.strptime(fecha_str_traducida, "%d %b %Y")
-        fecha_inicio_sql = fecha_inicio_datetime.strftime("%Y-%m-%d")
+        fecha_inicio_str = "2025-08-01 00:00:00"
+        fecha_inicio_sql = datetime.strptime(fecha_inicio_str, "%Y-%m-%d %H:%M:%S")
 
         saldo = 40000000
 
@@ -108,7 +106,7 @@ def obtener_userinfo_bbdd(conn):
     for u in usuarios:
         fecha = u[5]
         if isinstance(fecha, str):
-            fecha = datetime.strptime(fecha, "%Y-%m-%d").date()
+            fecha = datetime.strptime(fecha, "%Y-%m-%d %H:%M:%S")
         usuarios_convertidos.append((
             u[0], u[1], u[2], u[3], u[4], fecha
         ))
@@ -161,9 +159,10 @@ def cerrar_BBDD(conn):
     conn.close()
 
 def actualizar_saldos_new(conn, nuevos_saldos):
+    log_message_with_print("🌐 Actualizando los saldos...")
     cursor = conn.cursor()
     # Obtener la fecha actual en formato "5 ago 2025"
-    fecha_hoy = datetime.today().date()
+    fecha_hoy = datetime.today().replace(microsecond=0)
     saldos_actuales_by_userId = obtener_saldos(conn)
 
     # Normaliza a lista de tuplas (saldo, modificationDate, id)
@@ -183,6 +182,7 @@ def actualizar_saldos_new(conn, nuevos_saldos):
     conn.commit()
 
 def actualizar_num_jugadores(conn, array_usuarios):
+    log_message_with_print("🌐 Actualizando el numero de jugadores...")
     """
     Actualiza la columna num_jugadores en la tabla usuarios a partir del array de usuarios
     y del diccionario que devuelve obtener_userId.
@@ -255,6 +255,7 @@ def insertar_registro(conn, tabla, valores):
     conn.commit()
 
 def insertar_varios(conn, tabla, lista_valores):
+    log_message_with_print("🌐 Insertando movimientos post...")
     """
     Inserta varios registros en la tabla a partir de una lista de diccionarios.
     """
@@ -262,9 +263,10 @@ def insertar_varios(conn, tabla, lista_valores):
         insertar_registro(conn, tabla, item)
 
 def obtener_resumen_movimientos(conn, user_dict, fecha_inicio_str):
+    log_message_with_print("🌐 Obteniendo resumen de los movimientos insertados...")
     cursor = conn.cursor()
     resultados = []
-    fecha_hoy = datetime.today().date()
+    fecha_hoy = datetime.today()
     for nombre, user_id in user_dict.items():
         resumen = {'usuario_id': user_id}
 
@@ -312,6 +314,7 @@ def obtener_resumen_movimientos(conn, user_dict, fecha_inicio_str):
 
     return resultados
 def obtener_saldos_actualizados(conn, movimientos):
+    log_message_with_print("🌐 Obteniendo los saldos actualizados...")
     # Obtener saldos actuales de la BBDD
     saldos_actuales = obtener_saldos(conn)  # {usuario_id: saldo}
 

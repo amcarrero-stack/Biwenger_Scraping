@@ -58,7 +58,7 @@ def do_obtener_usuarios(driver):
     return usuarios
 
 def get_posts_until_date(driver, cutoff_datetime):
-    log_message('entra en get_posts_until_date')
+    log_message_with_print("🌐 Obteniendo post...")
     driver.get(URL_BIWENGER_HOME)
     last_height = driver.execute_script("return document.body.scrollHeight")
     repetir = True
@@ -66,17 +66,15 @@ def get_posts_until_date(driver, cutoff_datetime):
     while repetir:
         time.sleep(1)
         all_posts = driver.find_elements(By.CSS_SELECTOR, 'league-board-post')
-        log_message(f'all_posts len es: {len(all_posts)}')
+        log_message_with_print(f'all_posts len es: {len(all_posts)}')
         postToRet = []
         for post in all_posts:
             try:
                 date_elem = post.find_element(By.CSS_SELECTOR, "div.date")
-                date_str = date_elem.get_attribute("title").split(',')[0]  # Ej: "29 jul 2025, 13:37:05"
+                date_str = date_elem.get_attribute("title")  # Ej: "29 jul 2025, 13:37:05"
                 if not date_str:
                     continue
-                fecha_str_traducida = traducir_mes(date_str)
-                post_datetime = datetime.strptime(fecha_str_traducida, "%d %b %Y").date()
-
+                post_datetime = traducir_mes(date_str)
                 if is_a_valid_post(post) and post_datetime < cutoff_datetime:
                     repetir = False
                     break
@@ -106,6 +104,7 @@ def is_a_valid_post(league_board_post):
         log_message(f"⚠️ No se pudo encontrar el h3 esperado")
 
 def obtenerMovimientos(posts):
+    log_message_with_print("🌐 Obteniendo movimientos a partir de los post...")
     movimientos_to_insert = []
     conn = get_db_connection()
     user_dict = obtener_userIds(conn)
@@ -114,9 +113,8 @@ def obtenerMovimientos(posts):
             header_div = post.find_element(By.CSS_SELECTOR, "div.header.ng-star-inserted")
             h3_element = header_div.find_element(By.TAG_NAME, "h3")
             date_elem = header_div.find_element(By.CSS_SELECTOR, "div.date")
-            date_str = date_elem.get_attribute("title").split(',')[0]
-            fecha_str_traducida = traducir_mes(date_str)
-            post_datetime = datetime.strptime(fecha_str_traducida, "%d %b %Y").date()
+            date_str = date_elem.get_attribute("title")
+            post_datetime = traducir_mes(date_str)
 
             cardName = h3_element.text.strip()
             if cardName == 'MERCADO DE FICHAJES':
