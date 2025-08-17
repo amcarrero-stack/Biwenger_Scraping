@@ -4,20 +4,20 @@ import locale
 from datetime import datetime, date
 from bloque_1_selenium import traducir_mes
 from utils import print_usuarios
+locale.setlocale(locale.LC_TIME, "C")
 
 #crear tablas si no existen
 # conn = get_db_connection()
 # crear_tablas_si_no_existen(conn)
 # cerrar_BBDD(conn)
 
-# # BORRAR USUARIOS
-# conn = get_db_connection()
-# borrar_todos_los_usuarios(conn)
-# print_usuarios(obtener_userinfo_bbdd(conn))
-#
-# # BORRAR MOVIMIENTOS
-# conn = get_db_connection()
-# borrar_todos_los_movimientos(conn)
+# BORRAR USUARIOS
+conn = get_db_connection()
+borrar_todos_los_usuarios(conn)
+print_usuarios(obtener_userinfo_bbdd(conn))
+
+# BORRAR MOVIMIENTOS
+borrar_todos_los_movimientos(conn)
 
 
 # locale.setlocale(locale.LC_TIME, "C")  # Fuerza el formato inglés estándar
@@ -35,25 +35,25 @@ from utils import print_usuarios
 # print(fecha_formateada)
 
 # ACTUALIZAR DATOS DE LA TABLA
-conn = get_db_connection()
-datos_to_update = [
-    {"id": 17, "modificationDate": "2025-08-16", "saldo": -3039410, "num_jugadores": 13},
-    {"id": 18, "modificationDate": "2025-08-16", "saldo": 2447900, "num_jugadores": 11},
-    {"id": 19, "modificationDate": "2025-08-16", "saldo": 53350, "num_jugadores": 11},
-    {"id": 20, "modificationDate": "2025-08-16", "saldo": 140150, "num_jugadores": 11},
-    {"id": 21, "modificationDate": "2025-08-16", "saldo": -2332740, "num_jugadores": 12},
-    {"id": 22, "modificationDate": "2025-08-16", "saldo": -1847210, "num_jugadores": 11},
-    {"id": 23, "modificationDate": "2025-08-16", "saldo": 187902, "num_jugadores": 12},
-    {"id": 24, "modificationDate": "2025-08-16", "saldo": -2883008, "num_jugadores": 13}
-]
-
-actualizar_varios(
-    conn,
-    "usuarios",
-    datos_to_update,
-    condicion_campo="id"
-)
-cerrar_BBDD(conn)
+# conn = get_db_connection()
+# datos_to_update = [
+#     {"id": 17, "modificationDate": "2025-08-16", "saldo": -3039410, "num_jugadores": 13},
+#     {"id": 18, "modificationDate": "2025-08-16", "saldo": 2447900, "num_jugadores": 11},
+#     {"id": 19, "modificationDate": "2025-08-16", "saldo": 53350, "num_jugadores": 11},
+#     {"id": 20, "modificationDate": "2025-08-16", "saldo": 140150, "num_jugadores": 11},
+#     {"id": 21, "modificationDate": "2025-08-16", "saldo": -2332740, "num_jugadores": 12},
+#     {"id": 22, "modificationDate": "2025-08-16", "saldo": -1847210, "num_jugadores": 11},
+#     {"id": 23, "modificationDate": "2025-08-16", "saldo": 187902, "num_jugadores": 12},
+#     {"id": 24, "modificationDate": "2025-08-16", "saldo": -2883008, "num_jugadores": 13}
+# ]
+#
+# actualizar_varios(
+#     conn,
+#     "usuarios",
+#     datos_to_update,
+#     condicion_campo="id"
+# )
+# cerrar_BBDD(conn)
 
 # INSERTA DATOS EN UNA TABLA
 # movimientos_realizados = [
@@ -94,3 +94,14 @@ cerrar_BBDD(conn)
 # print("Antes:", locale.getlocale(locale.LC_TIME))
 
 # print(Path(__file__).parent)
+
+# fecha_inicio_str = "2025-08-01 00:00:00"
+# print(type(datetime.strptime(fecha_inicio_str, "%Y-%m-%d %H:%M:%S")))
+
+# fecha_inicio_str = "2025-08-01 00:00:00.000"
+# fecha = datetime.strptime(fecha_inicio_str, "%Y-%m-%d %H:%M:%S.%f")
+# print(fecha)
+
+# fecha_hoy = datetime.today()
+# fecha_sin_micro = fecha_hoy.replace(microsecond=0)
+# print(type(fecha_sin_micro))

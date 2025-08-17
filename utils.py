@@ -3,6 +3,8 @@ from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from config import CARPETA_LOGS, CHROMEDRIVER_PATH
 from datetime import datetime
+import locale
+locale.setlocale(locale.LC_TIME, "C")
 
 # Variable global del módulo
 _LOG_FILE_PATH = None
@@ -58,15 +60,33 @@ def crear_driver():
 def obtener_timestamp_actual(formato="%Y-%m-%d_%H-%M-%S"):
     return datetime.now().strftime(formato)
 
-def traducir_mes(mes_es):
+def traducir_mes(fecha_str):
+    """
+    Convierte una fecha en formato '29 ago 2025, 13:37:05'
+    a un objeto datetime usando locale inglés.
+    """
+    # Intentamos establecer locale inglés
+    try:
+        locale.setlocale(locale.LC_TIME, "C")
+    except:
+        locale.setlocale(locale.LC_TIME, "C")  # fallback
+
+    # Diccionario para traducir meses de español a inglés
     traducciones = {
         "ene": "Jan", "feb": "Feb", "mar": "Mar", "abr": "Apr",
         "may": "May", "jun": "Jun", "jul": "Jul", "ago": "Aug",
         "sep": "Sep", "oct": "Oct", "nov": "Nov", "dic": "Dec"
     }
-    for esp, eng in traducciones.items():
-        mes_es = mes_es.replace(f" {esp} ", f" {eng} ")
-    return mes_es
+
+    # Reemplazar el mes español por inglés
+    for mes_es, mes_en in traducciones.items():
+        if mes_es in fecha_str:
+            fecha_str = fecha_str.replace(mes_es, mes_en)
+            break
+
+    # Convertir a datetime
+    dt = datetime.strptime(fecha_str, "%d %b %Y, %H:%M:%S")
+    return dt
 
 def print_usuarios(usuarios):
     for usuario in usuarios:
