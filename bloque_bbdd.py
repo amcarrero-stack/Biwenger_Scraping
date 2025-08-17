@@ -2,13 +2,12 @@ import sqlite3
 from pathlib import Path
 from datetime import datetime
 import locale
-from utils import traducir_mes
+from utils import traducir_mes, log_message
 
-# Asegúrate de establecer el locale en español para los nombres de los meses
-locale.setlocale(locale.LC_TIME, 'es_ES.UTF-8')  # En Windows puede ser 'Spanish_Spain'
+locale.setlocale(locale.LC_TIME, "C")
 
 RUTA_BASE = Path(__file__).parent
-DB_PATH = RUTA_BASE / "BBDD" / "biwenger.db"
+DB_PATH = RUTA_BASE / "BBDD" / "biwenger_bbdd.db"
 
 def get_db_connection():
     if not DB_PATH.parent.exists():
@@ -18,17 +17,17 @@ def get_db_connection():
 
 def crear_tablas_si_no_existen(conn):
     cursor = conn.cursor()
-    # cursor.execute('''
-    #     CREATE TABLE IF NOT EXISTS usuarios (
-    #         id INTEGER PRIMARY KEY AUTOINCREMENT,
-    #         name TEXT UNIQUE NOT NULL,
-    #         url_name TEXT UNIQUE NOT NULL,
-    #         saldo INTEGER NOT NULL,
-    #         saldo_anterior INTEGER NOT NULL,
-    #         num_jugadores INTEGER,
-    #         modificationDate DATE
-    #     )
-    # ''')
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS usuarios (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT UNIQUE NOT NULL,
+            url_name TEXT UNIQUE NOT NULL,
+            saldo INTEGER NOT NULL,
+            saldo_anterior INTEGER NOT NULL,
+            num_jugadores INTEGER,
+            modificationDate DATE
+        )
+    ''')
 
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS usuarios_historial (
@@ -42,18 +41,18 @@ def crear_tablas_si_no_existen(conn):
         )
     ''')
 
-    # cursor.execute('''
-    #     CREATE TABLE IF NOT EXISTS movimientos (
-    #         id INTEGER PRIMARY KEY AUTOINCREMENT,
-    #         usuario_id INTEGER NOT NULL,
-    #         tipo TEXT CHECK(tipo IN ('fichaje', 'venta', 'clausulazo', 'abono', 'penalizacion')),
-    #         jugador TEXT,
-    #         cantidad REAL,
-    #         fecha DATE,
-    #         FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
-    #     )
-    # ''')
-    # conn.commit()
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS movimientos (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            usuario_id INTEGER NOT NULL,
+            tipo TEXT CHECK(tipo IN ('fichaje', 'venta', 'clausulazo', 'abono', 'penalizacion')),
+            jugador TEXT,
+            cantidad REAL,
+            fecha DATE,
+            FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
+        )
+    ''')
+    conn.commit()
 
 # Insertar un usuario
 def insertar_usuarios(conn, usuarios):
@@ -118,7 +117,7 @@ def obtener_userinfo_bbdd(conn):
 
 
 
-def obtener_userId(conn):
+def obtener_userIds(conn):
     cursor = conn.cursor()
     cursor.execute("SELECT id, name FROM usuarios")
     usuarios = cursor.fetchall()
@@ -126,6 +125,15 @@ def obtener_userId(conn):
     # Crear diccionario: key = name, value = id
     user_dict = {name: uid for uid, name in usuarios}
     return user_dict
+
+def obtener_userNames(conn):
+    cursor = conn.cursor()
+    cursor.execute("SELECT id, name FROM usuarios")
+    usuarios = cursor.fetchall()
+
+    # Crear diccionario: key = name, value = id
+    user_names_dict = {uid: name for uid, name in usuarios}
+    return user_names_dict
 
 def obtener_saldos(conn):
     cursor = conn.cursor()
@@ -149,56 +157,12 @@ def delete_movimientos(conn, movimientos):
         cursor.execute("DELETE FROM movimientos WHERE id = ?", (mov[0],))
     conn.commit()
 
-def print_usuarios(usuarios):
-    for usuario in usuarios:
-        print(f"ID: {usuario[0]}, Nombre: {usuario[1]}, Saldo: {usuario[2]}, URL Name: {usuario[3]}, Jugadores: {usuario[4]}, Fecha: {usuario[5]}")
-
 def cerrar_BBDD(conn):
     conn.close()
-
-def actualizar_saldos(conn, movimientos):
-    """
-    Actualiza el saldo y modificationDate de cada usuario según los movimientos.
-
-    :param conn: conexión a la base de datos SQLite.
-    :param movimientos: lista de diccionarios con username, compras y ventas.
-    """
-    cursor = conn.cursor()
-
-    # Obtener la fecha actual en formato "5 ago 2025"
-    locale.setlocale(locale.LC_TIME, "es_ES.UTF-8")
-    fecha_hoy = datetime.today()
-    fecha_formateada = fecha_hoy.strftime("%d %b %Y").replace('.', '')
-
-    for mov in movimientos:
-        username = mov['username']
-        compras = mov.get('compras', 0)
-        ventas = mov.get('ventas', 0)
-        penalizaciones = mov.get('penalizaciones', 0)
-
-        # Obtener el saldo actual
-        cursor.execute("SELECT saldo FROM usuarios WHERE name = ?", (username,))
-        resultado = cursor.fetchone()
-
-        if resultado:
-            saldo_actual = resultado[0]
-            saldo_nuevo = saldo_actual - compras + ventas - penalizaciones
-
-            # Actualizar saldo y fecha
-            cursor.execute(
-                "UPDATE usuarios SET saldo = ?, modificationDate = ? WHERE name = ?",
-                (saldo_nuevo, fecha_formateada, username)
-            )
-        else:
-            print(f"⚠️ Usuario '{username}' no encontrado en la tabla usuarios.")
-
-    conn.commit()
-    print("✅ Saldos y fechas actualizados correctamente.")
 
 def actualizar_saldos_new(conn, nuevos_saldos):
     cursor = conn.cursor()
     # Obtener la fecha actual en formato "5 ago 2025"
-    locale.setlocale(locale.LC_TIME, "es_ES.UTF-8")
     fecha_hoy = datetime.today().date()
     saldos_actuales_by_userId = obtener_saldos(conn)
 
@@ -209,8 +173,8 @@ def actualizar_saldos_new(conn, nuevos_saldos):
         # asumimos iterable de dicts con keys 'usuario_id' y 'saldo'
         pares = [(int(item['saldo']), fecha_hoy, int(saldos_actuales_by_userId[item['usuario_id']]), int(item['usuario_id'])) for item in nuevos_saldos]
 
-    print('Pares es:')
-    print(pares)
+    log_message('Pares en actualizar_saldos_new es:')
+    log_message(pares)
     # Actualizamos saldo y modificationDate
     cursor.executemany(
         "UPDATE usuarios SET saldo = ?, modificationDate = ?, saldo_anterior = ?  WHERE id = ?",
@@ -226,7 +190,7 @@ def actualizar_num_jugadores(conn, array_usuarios):
     cursor = conn.cursor()
 
     # Obtenemos el diccionario {name: usuario_id}
-    user_ids = obtener_userId(conn)
+    user_ids = obtener_userIds(conn)
 
     for usuario in array_usuarios:
         name = usuario['name']
@@ -290,17 +254,12 @@ def insertar_registro(conn, tabla, valores):
     cursor.execute(query, list(valores.values()))
     conn.commit()
 
-def insertar_varios(tabla, lista_valores):
+def insertar_varios(conn, tabla, lista_valores):
     """
     Inserta varios registros en la tabla a partir de una lista de diccionarios.
     """
-    conn = get_db_connection()
     for item in lista_valores:
         insertar_registro(conn, tabla, item)
-    cerrar_BBDD(conn)
-
-import locale
-from datetime import datetime
 
 def obtener_resumen_movimientos(conn, user_dict, fecha_inicio_str):
     cursor = conn.cursor()
@@ -352,56 +311,6 @@ def obtener_resumen_movimientos(conn, user_dict, fecha_inicio_str):
         resultados.append(resumen)
 
     return resultados
-
-
-def obtener_resumen_movimientos_desde_ultima_actualizacion(conn, fecha_inicio_str):
-    cursor = conn.cursor()
-    resultados = []
-    locale.setlocale(locale.LC_TIME, "es_ES.UTF-8")
-    fecha_hoy = datetime.today()
-    fecha_formateada = fecha_hoy.strftime("%d %b %Y").replace('.', '')
-    user_dict = obtener_userId(conn)
-
-    for nombre, user_id in user_dict.items():
-        resumen = {'usuario_id': user_id}
-
-        # Ventas
-        cursor.execute("""
-            SELECT COALESCE(SUM(cantidad), 0)
-            FROM movimientos
-            WHERE usuario_id = ? AND tipo = 'venta' AND fecha = ?
-        """, (user_id, fecha_formateada))
-        resumen['ventas'] = cursor.fetchone()[0]
-
-        # Fichajes
-        cursor.execute("""
-            SELECT COALESCE(SUM(cantidad), 0)
-            FROM movimientos
-            WHERE usuario_id = ? AND tipo = 'fichaje' AND fecha = ?
-        """, (user_id, fecha_formateada))
-        resumen['fichajes'] = cursor.fetchone()[0]
-
-        # Penalizaciones
-        cursor.execute("""
-            SELECT COALESCE(SUM(cantidad), 0)
-            FROM movimientos
-            WHERE usuario_id = ? AND tipo = 'penalizacion' AND fecha = ?
-        """, (user_id, fecha_formateada))
-        resumen['penalizaciones'] = cursor.fetchone()[0]
-
-        # Clausulazos
-        cursor.execute("""
-            SELECT COALESCE(SUM(cantidad), 0)
-            FROM movimientos
-            WHERE usuario_id = ? AND tipo = 'clausulazo' AND fecha = ?
-        """, (user_id, fecha_formateada))
-        resumen['clausulazos'] = cursor.fetchone()[0]
-
-        resultados.append(resumen)
-
-    return resultados
-
-
 def obtener_saldos_actualizados(conn, movimientos):
     # Obtener saldos actuales de la BBDD
     saldos_actuales = obtener_saldos(conn)  # {usuario_id: saldo}
@@ -411,7 +320,7 @@ def obtener_saldos_actualizados(conn, movimientos):
         usuario_id = mov['usuario_id']
 
         if usuario_id not in saldos_actuales:
-            print(f"⚠ Usuario {usuario_id} no encontrado en BBDD, se omite.")
+            log_message(f"⚠ Usuario {usuario_id} no encontrado en BBDD, se omite.")
             continue
 
         saldo_inicial = saldos_actuales[usuario_id]
@@ -430,6 +339,17 @@ def obtener_saldos_actualizados(conn, movimientos):
 
     return saldos_actuales
 
+def print_saldos_actualizados(conn, dict_id_saldos):
+    dict_id_userName = obtener_userNames(conn)
+    dict_username_saldos = {}
+
+    for uid, saldo in dict_id_saldos.items():
+        username = dict_id_userName.get(uid, f"ID_{uid}")  # si no existe el id, pone ID_xxx
+        dict_username_saldos[username] = saldo
+
+    return dict_username_saldos
+
+
 def obtener_saldos_actualizados_hoy(conn, movimientos):
     # Obtener saldos actuales de la BBDD
     saldos_actuales = obtener_saldos(conn)  # {usuario_id: saldo}
@@ -439,7 +359,7 @@ def obtener_saldos_actualizados_hoy(conn, movimientos):
         usuario_id = mov['usuario_id']
 
         if usuario_id not in saldos_actuales:
-            print(f"⚠ Usuario {usuario_id} no encontrado en BBDD, se omite.")
+            log_message(f"⚠ Usuario {usuario_id} no encontrado en BBDD, se omite.")
             continue
 
         saldo_inicial = saldos_actuales[usuario_id]
