@@ -24,15 +24,7 @@ def main():
         user_dict = obtener_userIds(conn)
         user_names_dict = obtener_userNames(conn)
         print_usuarios(obtener_userinfo_bbdd(conn))
-        # movimientos_hoy = obtener_movimientos_hoy(conn)
-        # if movimientos_hoy:
-        #     resumen_movimientos = obtener_resumen_movimientos(conn, user_dict, modification_date)
-        #     log_message(resumen_movimientos)
-        #     saldos_actualizados = obtener_saldos_actualizados_hoy(conn, resumen_movimientos)
-        #     log_message(saldos_actualizados)
-        #     actualizar_saldos_new(conn, saldos_actualizados)
-        #     delete_movimientos(conn, movimientos_hoy)
-        #
+
         posts = get_posts_until_date(driver, modification_date)
         log_message(f"Se han recogido {len(posts)} movimientos hasta {modification_date}")
         movimientos_to_insert = obtenerMovimientos(posts)

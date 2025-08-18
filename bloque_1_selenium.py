@@ -22,11 +22,15 @@ def do_login(driver):
     web_element_cuentaDisponible = driver.find_elements(By.LINK_TEXT, "Ya tengo cuenta")[0]
     web_element_cuentaDisponible.click()
 
+    # 👇 Leer credenciales de variables de entorno
+    email = os.getenv("BIWENGER_USER")
+    password = os.getenv("BIWENGER_PASS")
+
     web_element_email_input = driver.find_elements(By.NAME, 'email')[0]
-    web_element_email_input.send_keys("amcarrero@gmail.com")
+    web_element_email_input.send_keys(email)
 
     web_element_email_input = driver.find_elements(By.NAME, 'password')[0]
-    web_element_email_input.send_keys("Carrero1110")
+    web_element_email_input.send_keys(password)
     time.sleep(3)
 
     web_element_boton_login = driver.find_elements(By.CSS_SELECTOR, 'button.btn.squared')[0]
@@ -83,7 +87,6 @@ def get_posts_until_date(driver, cutoff_datetime):
 
             except Exception:
                 continue
-
         # Hacemos scroll para cargar más posts
         driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
         time.sleep(1)
