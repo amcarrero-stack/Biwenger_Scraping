@@ -1,4 +1,4 @@
-from config import URL_BIWENGER_HOME, URL_BIWENGER_LIGA
+from config import URL_BIWENGER_HOME, URL_BIWENGER_LIGA, URL_BIWENGER_PLAYERS
 import time
 import locale
 from selenium.webdriver.common.by import By
@@ -7,8 +7,8 @@ from collections import Counter
 from bloque_bbdd import get_db_connection, obtener_userIds
 from utils import traducir_mes, log_message, log_message_with_print
 import os
-
 locale.setlocale(locale.LC_TIME, "C")
+# Variable global del módulo
 
 def do_login(driver):
     driver.get(URL_BIWENGER_HOME)
@@ -36,6 +36,14 @@ def do_login(driver):
     web_element_boton_login = driver.find_elements(By.CSS_SELECTOR, 'button.btn.squared')[0]
     web_element_boton_login.click()
 
+def cerrar_modal_password(driver):
+    try:
+        boton = driver.find_element(By.XPATH, "//button[contains(text(), 'Aceptar')]")
+        boton.click()
+        print("✅ Popup de contraseña cerrada")
+    except:
+        print("ℹ️ No se encontró popup de contraseña")
+
 def do_obtener_usuarios(driver):
     time.sleep(1)
     driver.get(URL_BIWENGER_LIGA)
@@ -50,12 +58,24 @@ def do_obtener_usuarios(driver):
             href = enlace.get_attribute("href")
             num_jug = card.find_element(By.CSS_SELECTOR, "div.main h4").text.split(' jug.')[0]
 
+            enlace.click()
+            time.sleep(1)
+            plantilla_to_ret = []
+            plantilla = driver.find_elements(By.CSS_SELECTOR, "player-card")
+            for jugador in plantilla:
+                nombre_jugador = jugador.find_element(By.CSS_SELECTOR, "div.main h3 a").text.strip()
+                plantilla_to_ret.append(nombre_jugador)
+
             usuario = {
                 "name": nombre,
                 "url_name": href,
-                "num_jug": int(num_jug)
+                "num_jug": int(num_jug),
+                "plantilla": plantilla_to_ret
             }
             usuarios.append(usuario)
+            boton_atras = driver.find_element(By.CSS_SELECTOR, "div.header i")
+            boton_atras.click()
+            time.sleep(1)
         except:
             continue  # Por si algún user-card no tiene nombre o el selector falla
     log_message(usuarios)
@@ -303,3 +323,64 @@ def get_user_repited(listNames):
         return conteo.most_common(1)[0][0]
     else:
         return None  # Por si el array está vacío o solo tenía "Mercado"
+
+def number_of_players(driver):
+    driver.get(URL_BIWENGER_PLAYERS)
+    time.sleep(1)
+    total_jugadores = int(driver.find_element(By.CSS_SELECTOR, 'pagination span').text.split('de ')[1])
+    print(total_jugadores)
+    return int(total_jugadores)
+def set_all_players(driver):
+    driver.get(URL_BIWENGER_PLAYERS)
+    time.sleep(3)
+    jugadores = []
+
+    while True:
+        try:
+            jugadores += add_players(driver)
+            # Buscar todos los <li> de la paginación
+            botones_li = driver.find_elements(By.CSS_SELECTOR, "pagination ul li")
+            boton_siguiente = None
+
+            for li in botones_li:
+                enlace = li.find_element(By.TAG_NAME, "a")
+                if enlace.text.strip() == "›":
+                    boton_siguiente = li
+                    break
+
+            if boton_siguiente:
+                # Aquí comprobamos la clase del <li>, no del <a>
+                if "disabled" in boton_siguiente.get_attribute("class"):
+                    break
+                else:
+                    enlace = boton_siguiente.find_element(By.TAG_NAME, "a")
+                    enlace.click()
+                    time.sleep(2)
+            else:
+                break
+        except Exception as e:
+            print(f"Error en paginación: {e}")
+            break
+
+    print(f"Se han extraído {len(jugadores)} jugadores.")
+    print(jugadores)
+    return jugadores
+
+def add_players(driver):
+    jugadores = []
+    # Extraer jugadores de la página actual
+    filas = driver.find_elements(By.CSS_SELECTOR, "player-list player-card")
+    for fila in filas:
+        try:
+            nombre = fila.find_element(By.CSS_SELECTOR, ".main h3 a").text.strip()
+            valor = int(fila.find_element(By.CSS_SELECTOR, ".main h4").text.replace('€', '').replace('.', '').strip())
+            posicion = fila.find_element(By.CSS_SELECTOR, "player-position").get_attribute("title")
+            equipo = fila.find_element(By.CSS_SELECTOR, "div.team-pos a").get_attribute("title")
+
+            jugador_info = {"nombre": nombre, "valor": valor, "posicion": posicion, "equipo": equipo}
+            print(jugador_info)
+            jugadores.append(jugador_info)
+        except Exception as e:
+            print(f"Error extrayendo jugador: {e}")
+
+    return jugadores

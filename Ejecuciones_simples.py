@@ -105,3 +105,4 @@ borrar_todos_los_movimientos(conn)
 # fecha_hoy = datetime.today()
 # fecha_sin_micro = fecha_hoy.replace(microsecond=0)
 # print(type(fecha_sin_micro))
+

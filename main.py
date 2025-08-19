@@ -1,5 +1,5 @@
 from utils import log_message, crear_driver, print_usuarios, iniciar_log, log_message_with_print
-from bloque_1_selenium import get_posts_until_date, obtenerMovimientos, do_login, do_obtener_usuarios
+from bloque_1_selenium import get_posts_until_date, obtenerMovimientos, do_login, do_obtener_usuarios, set_all_players, number_of_players
 from bloque_bbdd import *
 import traceback
 
@@ -10,10 +10,18 @@ def main():
     try:
         conn = get_db_connection()
         crear_tablas_si_no_existen(conn)
-
+        # Crear driver
         driver = crear_driver()
         log_message_with_print("🌐 Navegando a la página principal de Biwenger...")
         do_login(driver)
+        input("🔒 Cierra todas las ventanas emergentes en el navegador y pulsa Enter para continuar...")
+        jugadores_actuales = obtener_registros_tabla(conn, 'jugadores', ['id', 'nombre'])
+        if len(jugadores_actuales) != number_of_players(driver):
+            delete_registros_table(conn, 'jugadores')
+            jugadores_to_insert = set_all_players(driver)
+            insertar_varios(conn, 'jugadores', jugadores_to_insert)
+            jugadores_actuales = len(obtener_registros_tabla(conn, 'jugadores'))
+
         usuarios_actuales = do_obtener_usuarios(driver)
         log_message(f"Usuarios detectados: {[u['name'] for u in usuarios_actuales]}")
         usuarios_db = obtener_userinfo_bbdd(conn)
@@ -36,7 +44,8 @@ def main():
         saldos_actualizados = obtener_saldos_actualizados(conn, resumen_movimientos)
         log_message(f"Saldos actualizados: {print_saldos_actualizados(conn, saldos_actualizados)}")
         actualizar_saldos_new(conn, saldos_actualizados)
-        actualizar_num_jugadores(conn, usuarios_actuales)
+        resetear_propietarios_jugadores(conn)
+        actualizar_propietarios_jugadores(conn, usuarios_actuales)
 
     except Exception as e:
         log_message_with_print(f"❌ Error durante la ejecución: {e}")
