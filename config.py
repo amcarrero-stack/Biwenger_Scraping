@@ -26,6 +26,7 @@ FECHA_INICIO_LIGA = "2025-08-01"
 URL_BIWENGER_HOME = "https://biwenger.as.com/"
 URL_BIWENGER_EQUIPO = "https://biwenger.as.com/team"
 URL_BIWENGER_LIGA = "https://biwenger.as.com/league"
+URL_BIWENGER_PLAYERS = "https://biwenger.as.com/players"
 
 # === SELENIUM ===
 CHROME_DRIVER_PATH = None  # Usar el ChromeDriver que tenga el sistema por defecto

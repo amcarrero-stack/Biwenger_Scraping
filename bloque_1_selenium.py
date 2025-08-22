@@ -1,14 +1,15 @@
-from config import URL_BIWENGER_HOME, URL_BIWENGER_LIGA
+from config import URL_BIWENGER_HOME, URL_BIWENGER_LIGA, URL_BIWENGER_PLAYERS
 import time
 import locale
 from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import Select
 from datetime import datetime, date
 from collections import Counter
 from bloque_bbdd import get_db_connection, obtener_userIds
 from utils import traducir_mes, log_message, log_message_with_print
 import os
-
 locale.setlocale(locale.LC_TIME, "C")
+# Variable global del módulo
 
 def do_login(driver):
     driver.get(URL_BIWENGER_HOME)
@@ -22,15 +23,27 @@ def do_login(driver):
     web_element_cuentaDisponible = driver.find_elements(By.LINK_TEXT, "Ya tengo cuenta")[0]
     web_element_cuentaDisponible.click()
 
+    # 👇 Leer credenciales de variables de entorno
+    email = os.getenv("BIWENGER_USER")
+    password = os.getenv("BIWENGER_PASS")
+
     web_element_email_input = driver.find_elements(By.NAME, 'email')[0]
-    web_element_email_input.send_keys("amcarrero@gmail.com")
+    web_element_email_input.send_keys(email)
 
     web_element_email_input = driver.find_elements(By.NAME, 'password')[0]
-    web_element_email_input.send_keys("Carrero1110")
+    web_element_email_input.send_keys(password)
     time.sleep(3)
 
     web_element_boton_login = driver.find_elements(By.CSS_SELECTOR, 'button.btn.squared')[0]
     web_element_boton_login.click()
+
+def cerrar_modal_password(driver):
+    try:
+        boton = driver.find_element(By.XPATH, "//button[contains(text(), 'Aceptar')]")
+        boton.click()
+        print("✅ Popup de contraseña cerrada")
+    except:
+        print("ℹ️ No se encontró popup de contraseña")
 
 def do_obtener_usuarios(driver):
     time.sleep(1)
@@ -46,12 +59,24 @@ def do_obtener_usuarios(driver):
             href = enlace.get_attribute("href")
             num_jug = card.find_element(By.CSS_SELECTOR, "div.main h4").text.split(' jug.')[0]
 
+            enlace.click()
+            time.sleep(1)
+            plantilla_to_ret = []
+            plantilla = driver.find_elements(By.CSS_SELECTOR, "player-card")
+            for jugador in plantilla:
+                nombre_jugador = jugador.find_element(By.CSS_SELECTOR, "div.main h3 a").text.strip()
+                plantilla_to_ret.append(nombre_jugador)
+
             usuario = {
                 "name": nombre,
                 "url_name": href,
-                "num_jug": int(num_jug)
+                "num_jug": int(num_jug),
+                "plantilla": plantilla_to_ret
             }
             usuarios.append(usuario)
+            boton_atras = driver.find_element(By.CSS_SELECTOR, "div.header i")
+            boton_atras.click()
+            time.sleep(1)
         except:
             continue  # Por si algún user-card no tiene nombre o el selector falla
     log_message(usuarios)
@@ -83,7 +108,6 @@ def get_posts_until_date(driver, cutoff_datetime):
 
             except Exception:
                 continue
-
         # Hacemos scroll para cargar más posts
         driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
         time.sleep(1)
@@ -192,7 +216,7 @@ def obtenerMovimientos(posts):
                     for jugador in jugadores_transferidos:
                         jugadorH3 = jugador.find_element(By.TAG_NAME, "h3")
                         fichajeName = jugadorH3.find_element(By.TAG_NAME, "a").text.strip()
-                        userNames = get_user_name_clausulas(post)
+                        userNames = get_user_name_clausulas(jugador)
                         userNameVenta = userNames[0]
                         userNameCompra = userNames[1]
                         valorVentaStr = jugador.find_element(By.TAG_NAME, 'strong').text.strip()
@@ -225,6 +249,30 @@ def obtenerMovimientos(posts):
         except Exception as e:
             log_message(f"   ⚠️ No se pudo encontrar el h3 esperado: {e}")
     return movimientos_to_insert
+
+def obtener_movimientos_abonos(driver, user_dict):
+    select_element = driver.find_element(By.CSS_SELECTOR, "div.tools select.pl")
+    select_obj = Select(select_element)
+    select_obj.select_by_visible_text("Jornadas")
+    time.sleep(2)
+    moviemientos_abonos = []
+    try:
+        all_posts = driver.find_elements(By.CSS_SELECTOR, 'league-board-post')
+        last_post = all_posts[0]
+        numero_de_jornada = last_post.find_element(By.CSS_SELECTOR, "h3 a").text.strip()
+        time_relative = last_post.find_element(By.CSS_SELECTOR, "time-relative")
+        fecha_sin_formato = time_relative.get_attribute("title")
+        post_date = datetime.strptime(fecha_sin_formato, "%d/%m/%y, %H:%M")
+        tr_list = last_post.find_elements(By.CSS_SELECTOR, 'div.content tr')
+        for row in tr_list:
+            td_list = row.find_elements(By.CSS_SELECTOR, 'td')
+            user_name = td_list[1].find_element(By.CSS_SELECTOR, "a").text
+            valor = td_list[3].find_element(By.CSS_SELECTOR, "increment").text.replace(" €", "").replace(".", "")
+            abono = {'usuario_id': user_dict[user_name], 'tipo': 'abono', 'jugador': numero_de_jornada, 'cantidad': int(valor), 'fecha': str(post_date)}
+            moviemientos_abonos.append(abono)
+    except Exception as e:
+        print("❌ El div.prueba no existe en el primer card")
+    return moviemientos_abonos
 
 def has_header_name(post):
     hasHeaderName = True
@@ -260,18 +308,15 @@ def get_user_name_fichajes(jugador):
         log_message(f"   ⚠️ Excepcion en get_user_name_fichajes: {e}")
     return userNames
 
-def get_user_name_clausulas(post):
+def get_user_name_clausulas(jugador):
     try:
         userNames = []
-        content_transfer_div = post.find_element(By.CSS_SELECTOR, "div.content.transfer")
-        jugadores_transferidos = content_transfer_div.find_elements(By.TAG_NAME, 'li')
-        for jugador in jugadores_transferidos:
-            from_to_div = jugador.find_element(By.CSS_SELECTOR, "div.from-to")
-            userlinks = from_to_div.find_elements(By.TAG_NAME, 'user-link')
-            userNameVenta = userlinks[0].find_element(By.TAG_NAME, 'a').text.strip()
-            userNameCompra = userlinks[1].find_element(By.TAG_NAME, 'a').text.strip()
-            userNames.append(userNameVenta)
-            userNames.append(userNameCompra)
+        from_to_div = jugador.find_element(By.CSS_SELECTOR, "div.from-to")
+        userlinks = from_to_div.find_elements(By.TAG_NAME, 'user-link')
+        userNameVenta = userlinks[0].find_element(By.TAG_NAME, 'a').text.strip()
+        userNameCompra = userlinks[1].find_element(By.TAG_NAME, 'a').text.strip()
+        userNames.append(userNameVenta)
+        userNames.append(userNameCompra)
     except Exception as e:
         log_message(f"   ⚠️ Excepcion en get_user_name_clausulas: {e}")
     return userNames
@@ -300,3 +345,64 @@ def get_user_repited(listNames):
         return conteo.most_common(1)[0][0]
     else:
         return None  # Por si el array está vacío o solo tenía "Mercado"
+
+def number_of_players(driver):
+    driver.get(URL_BIWENGER_PLAYERS)
+    time.sleep(1)
+    total_jugadores = int(driver.find_element(By.CSS_SELECTOR, 'pagination span').text.split('de ')[1])
+    print(total_jugadores)
+    return int(total_jugadores)
+def set_all_players(driver):
+    driver.get(URL_BIWENGER_PLAYERS)
+    time.sleep(3)
+    jugadores = []
+
+    while True:
+        try:
+            jugadores += add_players(driver)
+            # Buscar todos los <li> de la paginación
+            botones_li = driver.find_elements(By.CSS_SELECTOR, "pagination ul li")
+            boton_siguiente = None
+
+            for li in botones_li:
+                enlace = li.find_element(By.TAG_NAME, "a")
+                if enlace.text.strip() == "›":
+                    boton_siguiente = li
+                    break
+
+            if boton_siguiente:
+                # Aquí comprobamos la clase del <li>, no del <a>
+                if "disabled" in boton_siguiente.get_attribute("class"):
+                    break
+                else:
+                    enlace = boton_siguiente.find_element(By.TAG_NAME, "a")
+                    enlace.click()
+                    time.sleep(2)
+            else:
+                break
+        except Exception as e:
+            print(f"Error en paginación: {e}")
+            break
+
+    print(f"Se han extraído {len(jugadores)} jugadores.")
+    print(jugadores)
+    return jugadores
+
+def add_players(driver):
+    jugadores = []
+    # Extraer jugadores de la página actual
+    filas = driver.find_elements(By.CSS_SELECTOR, "player-list player-card")
+    for fila in filas:
+        try:
+            nombre = fila.find_element(By.CSS_SELECTOR, ".main h3 a").text.strip()
+            valor = int(fila.find_element(By.CSS_SELECTOR, ".main h4").text.replace('€', '').replace('.', '').strip())
+            posicion = fila.find_element(By.CSS_SELECTOR, "player-position").get_attribute("title")
+            equipo = fila.find_element(By.CSS_SELECTOR, "div.team-pos a").get_attribute("title")
+
+            jugador_info = {"nombre": nombre, "valor": valor, "posicion": posicion, "equipo": equipo}
+            print(jugador_info)
+            jugadores.append(jugador_info)
+        except Exception as e:
+            print(f"Error extrayendo jugador: {e}")
+
+    return jugadores

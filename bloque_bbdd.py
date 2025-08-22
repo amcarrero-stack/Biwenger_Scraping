@@ -52,6 +52,17 @@ def crear_tablas_si_no_existen(conn):
             FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
         )
     ''')
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS jugadores (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            usuario_id INTEGER,
+            nombre TEXT,
+            valor REAL,
+            posicion TEXT,
+            equipo TEXT,
+            FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
+        )
+    ''')
     conn.commit()
 
 # Insertar un usuario
@@ -90,6 +101,15 @@ def borrar_todos_los_movimientos(conn):
         cursor.execute("DELETE FROM movimientos")
         conn.commit()
         print("Todos los movimientos han sido eliminados.")
+    except Exception as e:
+        print(f"Error al borrar los movimientos {e}")
+
+def delete_registros_table(conn, table):
+    try:
+        cursor = conn.cursor()
+        cursor.execute(f"DELETE FROM {table}")
+        conn.commit()
+        print(f"Todos los registros de {table} han sido eliminados.")
     except Exception as e:
         print(f"Error al borrar los movimientos {e}")
 
@@ -148,6 +168,32 @@ def obtener_movimientos_hoy(conn):
 
     return cursor.fetchall()
 
+def obtener_registros_tabla(conn, tabla, campos=None):
+    cursor = conn.cursor()
+
+    if campos and len(campos) > 0:
+        columnas = ", ".join(campos)
+    else:
+        columnas = "*"
+
+    query = f"SELECT {columnas} FROM {tabla}"
+    cursor.execute(query)
+    registros = cursor.fetchall()
+
+    return registros
+
+def obtener_jugadores_dict(jugadores):
+    # Crear diccionario: key = name, value = id
+    user_dict = {nombre: id for id, nombre in jugadores}
+    return user_dict
+
+def delete_movimientos(conn, movimientos):
+    cursor = conn.cursor()
+    for mov in movimientos:
+        # Aquí asumo que el id del movimiento está en la primera posición de la tupla
+        cursor.execute("DELETE FROM movimientos WHERE id = ?", (mov[0],))
+    conn.commit()
+
 def delete_movimientos(conn, movimientos):
     cursor = conn.cursor()
     for mov in movimientos:
@@ -181,33 +227,50 @@ def actualizar_saldos_new(conn, nuevos_saldos):
     )
     conn.commit()
 
-def actualizar_num_jugadores(conn, array_usuarios):
-    log_message_with_print("🌐 Actualizando el numero de jugadores...")
-    """
-    Actualiza la columna num_jugadores en la tabla usuarios a partir del array de usuarios
-    y del diccionario que devuelve obtener_userId.
-    """
+def actualizar_propietarios_jugadores(conn, array_usuarios):
+    log_message_with_print("🌐 Actualizando el numero de jugadores y propietarios de jugadores...")
+
     cursor = conn.cursor()
 
-    # Obtenemos el diccionario {name: usuario_id}
-    user_ids = obtener_userIds(conn)
+    # Obtenemos diccionarios necesarios
+    user_ids = obtener_userIds(conn)  # {name: usuario_id}
+
+    # Obtener lista de todos los jugadores desde BBDD (id, nombre)
+    cursor.execute("SELECT id, nombre FROM jugadores")
+    jugadores_bbdd = cursor.fetchall()
+    jugador_dict = obtener_jugadores_dict(jugadores_bbdd)  # {nombre: id}
 
     for usuario in array_usuarios:
         name = usuario['name']
         num_jug = usuario['num_jug']
+        plantilla = usuario.get('plantilla', [])
 
-        # Saltar usuarios que no estén en la BBDD (por ejemplo Pierre Nodoyuna)
+        # Saltar usuarios que no estén en la BBDD
         if name not in user_ids:
             continue
 
         usuario_id = user_ids[name]
 
-        # Actualizamos num_jugadores
+        # Actualizamos num_jugadores en usuarios
         cursor.execute(
             "UPDATE usuarios SET num_jugadores = ? WHERE id = ?",
             (num_jug, usuario_id)
         )
+
+        # Actualizamos el propietario de los jugadores
+        for jugador_nombre in plantilla:
+            if jugador_nombre in jugador_dict:
+                jugador_id = jugador_dict[jugador_nombre]
+                cursor.execute(
+                    "UPDATE jugadores SET usuario_id = ? WHERE id = ?",
+                    (usuario_id, jugador_id)
+                )
+            else:
+                # Si el jugador no está en BBDD, opcionalmente logueamos
+                log_message_with_print(f"⚠️ Jugador '{jugador_nombre}' no encontrado en la BBDD")
+
     conn.commit()
+
 
 def actualizar_registro(conn, tabla, valores, condicion_campo, condicion_valor):
     """
@@ -310,6 +373,16 @@ def obtener_resumen_movimientos(conn, user_dict, fecha_inicio_str):
         """, (user_id, fecha_inicio_str, fecha_hoy))
         resumen['clausulazos'] = cursor.fetchone()[0]
 
+        # Clausulazos
+        cursor.execute("""
+            SELECT COALESCE(SUM(cantidad), 0)
+            FROM movimientos
+            WHERE usuario_id = ?
+              AND tipo = 'abono'
+              AND fecha BETWEEN ? AND ?
+        """, (user_id, fecha_inicio_str, fecha_hoy))
+        resumen['abonos'] = cursor.fetchone()[0]
+
         resultados.append(resumen)
 
     return resultados
@@ -335,6 +408,7 @@ def obtener_saldos_actualizados(conn, movimientos):
                 + mov.get('clausulazos', 0)
                 + mov.get('fichajes', 0)  # ya viene negativo
                 + mov.get('penalizaciones', 0)  # ya viene negativo
+                + mov.get('abonos', 0)
         )
 
         # Guardar el saldo final en el diccionario
@@ -380,3 +454,13 @@ def obtener_saldos_actualizados_hoy(conn, movimientos):
         saldos_actuales[usuario_id] = saldo_final
 
     return saldos_actuales
+
+def resetear_propietarios_jugadores(conn):
+    """
+    Establece usuario_id a NULL para todos los jugadores en la tabla jugadores.
+    """
+    log_message_with_print("🌐 Reseteando propietarios de todos los jugadores...")
+
+    cursor = conn.cursor()
+    cursor.execute("UPDATE jugadores SET usuario_id = NULL")
+    conn.commit()

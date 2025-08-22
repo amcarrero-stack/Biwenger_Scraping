@@ -45,6 +45,11 @@ def log_message_with_print(message):
 def crear_driver():
     options = Options()
     options.add_argument("--start-maximized")
+    options.add_argument("--disable-save-password-bubble")
+    options.add_experimental_option("prefs", {
+        "credentials_enable_service": False,
+        "profile.password_manager_enabled": False
+    })
 
     try:
         log_message_with_print("🟡 Iniciando Chrome con perfil de usuario...")
