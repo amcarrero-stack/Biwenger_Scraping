@@ -1,5 +1,5 @@
 from utils import log_message, crear_driver, print_usuarios, iniciar_log, log_message_with_print
-from bloque_1_selenium import get_posts_until_date, obtenerMovimientos, do_login, do_obtener_usuarios, set_all_players, number_of_players
+from bloque_1_selenium import get_posts_until_date, obtenerMovimientos, do_login, do_obtener_usuarios, set_all_players, number_of_players, obtener_movimientos_abonos
 from bloque_bbdd import *
 import traceback
 
@@ -36,6 +36,8 @@ def main():
         posts = get_posts_until_date(driver, modification_date)
         log_message(f"Se han recogido {len(posts)} movimientos hasta {modification_date}")
         movimientos_to_insert = obtenerMovimientos(posts)
+        movimientos_to_insert += obtener_movimientos_abonos(driver, user_dict)
+        log_message(f"movimientos_to_insert es: {movimientos_to_insert}")
         insertar_varios(conn, 'movimientos', movimientos_to_insert)
 
         resumen_movimientos = obtener_resumen_movimientos(conn, user_dict, modification_date)

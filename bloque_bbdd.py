@@ -373,6 +373,16 @@ def obtener_resumen_movimientos(conn, user_dict, fecha_inicio_str):
         """, (user_id, fecha_inicio_str, fecha_hoy))
         resumen['clausulazos'] = cursor.fetchone()[0]
 
+        # Clausulazos
+        cursor.execute("""
+            SELECT COALESCE(SUM(cantidad), 0)
+            FROM movimientos
+            WHERE usuario_id = ?
+              AND tipo = 'abono'
+              AND fecha BETWEEN ? AND ?
+        """, (user_id, fecha_inicio_str, fecha_hoy))
+        resumen['abonos'] = cursor.fetchone()[0]
+
         resultados.append(resumen)
 
     return resultados
@@ -398,6 +408,7 @@ def obtener_saldos_actualizados(conn, movimientos):
                 + mov.get('clausulazos', 0)
                 + mov.get('fichajes', 0)  # ya viene negativo
                 + mov.get('penalizaciones', 0)  # ya viene negativo
+                + mov.get('abonos', 0)
         )
 
         # Guardar el saldo final en el diccionario

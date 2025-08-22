@@ -2,6 +2,7 @@ from config import URL_BIWENGER_HOME, URL_BIWENGER_LIGA, URL_BIWENGER_PLAYERS
 import time
 import locale
 from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import Select
 from datetime import datetime, date
 from collections import Counter
 from bloque_bbdd import get_db_connection, obtener_userIds
@@ -215,7 +216,7 @@ def obtenerMovimientos(posts):
                     for jugador in jugadores_transferidos:
                         jugadorH3 = jugador.find_element(By.TAG_NAME, "h3")
                         fichajeName = jugadorH3.find_element(By.TAG_NAME, "a").text.strip()
-                        userNames = get_user_name_clausulas(post)
+                        userNames = get_user_name_clausulas(jugador)
                         userNameVenta = userNames[0]
                         userNameCompra = userNames[1]
                         valorVentaStr = jugador.find_element(By.TAG_NAME, 'strong').text.strip()
@@ -248,6 +249,30 @@ def obtenerMovimientos(posts):
         except Exception as e:
             log_message(f"   ⚠️ No se pudo encontrar el h3 esperado: {e}")
     return movimientos_to_insert
+
+def obtener_movimientos_abonos(driver, user_dict):
+    select_element = driver.find_element(By.CSS_SELECTOR, "div.tools select.pl")
+    select_obj = Select(select_element)
+    select_obj.select_by_visible_text("Jornadas")
+    time.sleep(2)
+    moviemientos_abonos = []
+    try:
+        all_posts = driver.find_elements(By.CSS_SELECTOR, 'league-board-post')
+        last_post = all_posts[0]
+        numero_de_jornada = last_post.find_element(By.CSS_SELECTOR, "h3 a").text.strip()
+        time_relative = last_post.find_element(By.CSS_SELECTOR, "time-relative")
+        fecha_sin_formato = time_relative.get_attribute("title")
+        post_date = datetime.strptime(fecha_sin_formato, "%d/%m/%y, %H:%M")
+        tr_list = last_post.find_elements(By.CSS_SELECTOR, 'div.content tr')
+        for row in tr_list:
+            td_list = row.find_elements(By.CSS_SELECTOR, 'td')
+            user_name = td_list[1].find_element(By.CSS_SELECTOR, "a").text
+            valor = td_list[3].find_element(By.CSS_SELECTOR, "increment").text.replace(" €", "").replace(".", "")
+            abono = {'usuario_id': user_dict[user_name], 'tipo': 'abono', 'jugador': numero_de_jornada, 'cantidad': int(valor), 'fecha': str(post_date)}
+            moviemientos_abonos.append(abono)
+    except Exception as e:
+        print("❌ El div.prueba no existe en el primer card")
+    return moviemientos_abonos
 
 def has_header_name(post):
     hasHeaderName = True
@@ -283,18 +308,15 @@ def get_user_name_fichajes(jugador):
         log_message(f"   ⚠️ Excepcion en get_user_name_fichajes: {e}")
     return userNames
 
-def get_user_name_clausulas(post):
+def get_user_name_clausulas(jugador):
     try:
         userNames = []
-        content_transfer_div = post.find_element(By.CSS_SELECTOR, "div.content.transfer")
-        jugadores_transferidos = content_transfer_div.find_elements(By.TAG_NAME, 'li')
-        for jugador in jugadores_transferidos:
-            from_to_div = jugador.find_element(By.CSS_SELECTOR, "div.from-to")
-            userlinks = from_to_div.find_elements(By.TAG_NAME, 'user-link')
-            userNameVenta = userlinks[0].find_element(By.TAG_NAME, 'a').text.strip()
-            userNameCompra = userlinks[1].find_element(By.TAG_NAME, 'a').text.strip()
-            userNames.append(userNameVenta)
-            userNames.append(userNameCompra)
+        from_to_div = jugador.find_element(By.CSS_SELECTOR, "div.from-to")
+        userlinks = from_to_div.find_elements(By.TAG_NAME, 'user-link')
+        userNameVenta = userlinks[0].find_element(By.TAG_NAME, 'a').text.strip()
+        userNameCompra = userlinks[1].find_element(By.TAG_NAME, 'a').text.strip()
+        userNames.append(userNameVenta)
+        userNames.append(userNameCompra)
     except Exception as e:
         log_message(f"   ⚠️ Excepcion en get_user_name_clausulas: {e}")
     return userNames
