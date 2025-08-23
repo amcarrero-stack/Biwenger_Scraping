@@ -5,7 +5,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import Select
 from datetime import datetime, date
 from collections import Counter
-from bloque_bbdd import get_db_connection, obtener_userIds
+from bloque_bbdd import get_db_connection, obtener_userIds, obtener_registros_tabla
 from utils import traducir_mes, log_message, log_message_with_print
 import os
 locale.setlocale(locale.LC_TIME, "C")
@@ -250,7 +250,7 @@ def obtenerMovimientos(posts):
             log_message(f"   ⚠️ No se pudo encontrar el h3 esperado: {e}")
     return movimientos_to_insert
 
-def obtener_movimientos_abonos(driver, user_dict):
+def obtener_movimientos_abonos(conn, driver, user_dict):
     select_element = driver.find_element(By.CSS_SELECTOR, "div.tools select.pl")
     select_obj = Select(select_element)
     select_obj.select_by_visible_text("Jornadas")
@@ -258,18 +258,28 @@ def obtener_movimientos_abonos(driver, user_dict):
     moviemientos_abonos = []
     try:
         all_posts = driver.find_elements(By.CSS_SELECTOR, 'league-board-post')
-        last_post = all_posts[0]
-        numero_de_jornada = last_post.find_element(By.CSS_SELECTOR, "h3 a").text.strip()
-        time_relative = last_post.find_element(By.CSS_SELECTOR, "time-relative")
-        fecha_sin_formato = time_relative.get_attribute("title")
-        post_date = datetime.strptime(fecha_sin_formato, "%d/%m/%y, %H:%M")
-        tr_list = last_post.find_elements(By.CSS_SELECTOR, 'div.content tr')
-        for row in tr_list:
-            td_list = row.find_elements(By.CSS_SELECTOR, 'td')
-            user_name = td_list[1].find_element(By.CSS_SELECTOR, "a").text
-            valor = td_list[3].find_element(By.CSS_SELECTOR, "increment").text.replace(" €", "").replace(".", "")
-            abono = {'usuario_id': user_dict[user_name], 'tipo': 'abono', 'jugador': numero_de_jornada, 'cantidad': int(valor), 'fecha': str(post_date)}
-            moviemientos_abonos.append(abono)
+        movimientos = obtener_registros_tabla(conn, 'movimientos', ['jugador'], "jugador LIKE 'Jornada%'", "jugador DESC")
+        num_ultima_jornada = 'none'
+        if movimientos:
+            jornada_text = str(movimientos[0][0])
+            num_ultima_jornada = int(jornada_text.split(' ')[1])
+
+        for post in all_posts:
+            card_h3 = post.find_element(By.CSS_SELECTOR, "h3")
+            card_type = card_h3.text.strip()
+            numero_de_jornada_text = card_h3.find_element(By.CSS_SELECTOR, "a").text.strip()
+            numero_de_jornada_int = int(numero_de_jornada_text.split(' ')[1])
+            if (num_ultima_jornada == 'none' or numero_de_jornada_int > num_ultima_jornada) and "Fin de" in card_type:
+                time_relative = post.find_element(By.CSS_SELECTOR, "time-relative")
+                fecha_sin_formato = time_relative.get_attribute("title")
+                post_date = datetime.strptime(fecha_sin_formato, "%d/%m/%y, %H:%M")
+                tr_list = post.find_elements(By.CSS_SELECTOR, 'div.content tr')
+                for row in tr_list:
+                    td_list = row.find_elements(By.CSS_SELECTOR, 'td')
+                    user_name = td_list[1].find_element(By.CSS_SELECTOR, "a").text
+                    valor = td_list[3].find_element(By.CSS_SELECTOR, "increment").text.replace(" €", "").replace(".", "")
+                    abono = {'usuario_id': user_dict[user_name], 'tipo': 'abono', 'jugador': numero_de_jornada_text, 'cantidad': int(valor), 'fecha': str(post_date)}
+                    moviemientos_abonos.append(abono)
     except Exception as e:
         print("❌ El div.prueba no existe en el primer card")
     return moviemientos_abonos
@@ -392,14 +402,18 @@ def add_players(driver):
     jugadores = []
     # Extraer jugadores de la página actual
     filas = driver.find_elements(By.CSS_SELECTOR, "player-list player-card")
+    fecha_hoy = datetime.today().replace(microsecond=0)
     for fila in filas:
         try:
-            nombre = fila.find_element(By.CSS_SELECTOR, ".main h3 a").text.strip()
+            tag_a = fila.find_element(By.CSS_SELECTOR, ".main h3 a")
+            nombre = tag_a.text.strip()
+            href = tag_a.get_attribute("href")
+
             valor = int(fila.find_element(By.CSS_SELECTOR, ".main h4").text.replace('€', '').replace('.', '').strip())
             posicion = fila.find_element(By.CSS_SELECTOR, "player-position").get_attribute("title")
             equipo = fila.find_element(By.CSS_SELECTOR, "div.team-pos a").get_attribute("title")
 
-            jugador_info = {"nombre": nombre, "valor": valor, "posicion": posicion, "equipo": equipo}
+            jugador_info = {"nombre": nombre, "valor": valor, "posicion": posicion, "equipo": equipo, "href": href, "modificationDate": str(fecha_hoy)}
             print(jugador_info)
             jugadores.append(jugador_info)
         except Exception as e:

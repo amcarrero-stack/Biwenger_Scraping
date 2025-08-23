@@ -15,12 +15,10 @@ def main():
         log_message_with_print("🌐 Navegando a la página principal de Biwenger...")
         do_login(driver)
         input("🔒 Cierra todas las ventanas emergentes en el navegador y pulsa Enter para continuar...")
-        jugadores_actuales = obtener_registros_tabla(conn, 'jugadores', ['id', 'nombre'])
-        if len(jugadores_actuales) != number_of_players(driver):
-            delete_registros_table(conn, 'jugadores')
+        jugadores_actuales = obtener_registros_tabla(conn, 'jugadores', ['id', 'nombre'], '', '')
+        if not jugadores_actuales:
             jugadores_to_insert = set_all_players(driver)
             insertar_varios(conn, 'jugadores', jugadores_to_insert)
-            jugadores_actuales = len(obtener_registros_tabla(conn, 'jugadores'))
 
         usuarios_actuales = do_obtener_usuarios(driver)
         log_message(f"Usuarios detectados: {[u['name'] for u in usuarios_actuales]}")
@@ -36,7 +34,7 @@ def main():
         posts = get_posts_until_date(driver, modification_date)
         log_message(f"Se han recogido {len(posts)} movimientos hasta {modification_date}")
         movimientos_to_insert = obtenerMovimientos(posts)
-        movimientos_to_insert += obtener_movimientos_abonos(driver, user_dict)
+        movimientos_to_insert += obtener_movimientos_abonos(conn, driver, user_dict)
         log_message(f"movimientos_to_insert es: {movimientos_to_insert}")
         insertar_varios(conn, 'movimientos', movimientos_to_insert)
 

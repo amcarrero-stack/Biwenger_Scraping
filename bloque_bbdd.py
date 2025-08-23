@@ -56,10 +56,12 @@ def crear_tablas_si_no_existen(conn):
         CREATE TABLE IF NOT EXISTS jugadores (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             usuario_id INTEGER,
-            nombre TEXT,
+            nombre TEXT UNIQUE NOT NULL,
             valor REAL,
             posicion TEXT,
             equipo TEXT,
+            href TEXT,
+            modificationDate DATE,
             FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
         )
     ''')
@@ -168,19 +170,27 @@ def obtener_movimientos_hoy(conn):
 
     return cursor.fetchall()
 
-def obtener_registros_tabla(conn, tabla, campos=None):
+def obtener_registros_tabla(conn, tabla, campos=None, where=None, orderby=None):
     cursor = conn.cursor()
 
+    # Selección de columnas
     if campos and len(campos) > 0:
         columnas = ", ".join(campos)
     else:
         columnas = "*"
 
+    # Construcción de la query
     query = f"SELECT {columnas} FROM {tabla}"
+    if where and where.strip() != "":
+        query += f" WHERE {where}"
+    if orderby and orderby.strip() != "":
+        query += f" ORDER BY {orderby}"
+
     cursor.execute(query)
     registros = cursor.fetchall()
 
     return registros
+
 
 def obtener_jugadores_dict(jugadores):
     # Crear diccionario: key = name, value = id
@@ -463,4 +473,23 @@ def resetear_propietarios_jugadores(conn):
 
     cursor = conn.cursor()
     cursor.execute("UPDATE jugadores SET usuario_id = NULL")
+    conn.commit()
+
+def agregar_campos(tabla, campos_dict, conn):
+    """
+    Agrega campos a una tabla de forma dinámica.
+    :param tabla: str, nombre de la tabla
+    :param campos_dict: dict, ejemplo {"modificationDate": "DATE", "otroCampo": "TEXT"}
+    :param db_path: str, ruta de la base de datos
+    """
+    cursor = conn.cursor()
+
+    for campo, tipo in campos_dict.items():
+        sql = f"ALTER TABLE {tabla} ADD COLUMN {campo} {tipo}"
+        try:
+            cursor.execute(sql)
+            print(f"Campo '{campo}' agregado correctamente a la tabla '{tabla}'")
+        except sqlite3.OperationalError as e:
+            print(f"No se pudo agregar el campo '{campo}': {e}")
+
     conn.commit()
