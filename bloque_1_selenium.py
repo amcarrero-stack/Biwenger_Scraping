@@ -274,6 +274,54 @@ def obtener_movimientos_abonos(driver, user_dict):
         print("❌ El div.prueba no existe en el primer card")
     return moviemientos_abonos
 
+def obtener_movimientos_jugadores(posts, jugadores_dict):
+    log_message_with_print("🌐 Obteniendo movimientos a partir de los post...")
+    conn = get_db_connection()
+    movimientos_jugadores = []
+    movimientos_to_insert =[]
+    movimientos_to_delete = []
+    for i, post in enumerate(posts, start=1):
+        try:
+            header_div = post.find_element(By.CSS_SELECTOR, "div.header.ng-star-inserted")
+            h3_element = header_div.find_element(By.TAG_NAME, "h3")
+            cardName = h3_element.text.strip()
+            if cardName == 'MOVIMIENTO DE JUGADORES':
+                try:
+                    log_message(f"\n📌 Post {i}:")
+                    log_message(f"   - {h3_element.text.strip()}")
+                    player_movements_div = post.find_element(By.CSS_SELECTOR, "div.content.playerMovements")
+                    players = player_movements_div.find_elements(By.TAG_NAME, 'li')
+                    for player in players:
+                        player_name = player.find_element(By.CSS_SELECTOR, "div.main h3 a").text.strip()
+                        accion = player.find_element(By.CSS_SELECTOR, "div.content").text.strip()
+                        if "Ha abandonado" in accion:
+                            if jugadores_dict and player_name in jugadores_dict:
+                                movimientos_to_delete.append(jugadores_dict[player_name])
+                                print(f'El jugador {player_name} ha abandonado la competicion')
+                            continue
+                        equipo_a = player.find_element(By.CSS_SELECTOR, "div.content team-link a")
+                        nombre_equipo = equipo_a.get_attribute("title")
+                        player_position = player.find_element(By.CSS_SELECTOR, "div.position player-position")
+                        position = player_position.get_attribute("title")
+                        player_href = player.find_element(By.CSS_SELECTOR, "div.flex-center.basic.ng-star-inserted a")
+                        href = player_href.get_attribute("href")
+                        print(f'El jugador {player_name} ha sido fichado por {nombre_equipo}')
+                        movimiento = {"nombre": player_name, "posicion": position, "equipo": nombre_equipo, 'href': href}
+                        movimientos_to_insert.append(movimiento)
+                except Exception as e:
+                    log_message(f"   ⚠️ Excepcion en MERCADO DE FICHAJES: {e}")
+
+        except Exception as e:
+            log_message(f"   ⚠️ No se pudo encontrar el h3 esperado: {e}")
+
+    print(f'movimientos_to_delete es: {movimientos_to_delete}')
+    if movimientos_to_delete != []:
+        movimientos_jugadores.append({"recordsToDelete": movimientos_to_delete})
+    print(f'movimientos_to_insert es: {movimientos_to_insert}')
+    if movimientos_to_insert != []:
+        movimientos_jugadores.append({"recordsToInsert": movimientos_to_insert})
+    return movimientos_jugadores
+
 def has_header_name(post):
     hasHeaderName = True
     try:
@@ -392,6 +440,7 @@ def add_players(driver):
     jugadores = []
     # Extraer jugadores de la página actual
     filas = driver.find_elements(By.CSS_SELECTOR, "player-list player-card")
+    fecha_hoy = datetime.now().replace(microsecond=0)
     for fila in filas:
         try:
             nombre = fila.find_element(By.CSS_SELECTOR, ".main h3 a").text.strip()
@@ -399,7 +448,7 @@ def add_players(driver):
             posicion = fila.find_element(By.CSS_SELECTOR, "player-position").get_attribute("title")
             equipo = fila.find_element(By.CSS_SELECTOR, "div.team-pos a").get_attribute("title")
 
-            jugador_info = {"nombre": nombre, "valor": valor, "posicion": posicion, "equipo": equipo}
+            jugador_info = {"nombre": nombre, "valor": valor, "posicion": posicion, "equipo": equipo, "modificationDate": str(fecha_hoy)}
             print(jugador_info)
             jugadores.append(jugador_info)
         except Exception as e:

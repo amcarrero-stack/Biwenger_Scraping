@@ -60,6 +60,8 @@ def crear_tablas_si_no_existen(conn):
             valor REAL,
             posicion TEXT,
             equipo TEXT,
+            modificationDate DATE,
+            href TEXT,
             FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
         )
     ''')
@@ -318,7 +320,7 @@ def insertar_registro(conn, tabla, valores):
     conn.commit()
 
 def insertar_varios(conn, tabla, lista_valores):
-    log_message_with_print("🌐 Insertando movimientos post...")
+    # log_message_with_print("🌐 Insertando movimientos post...")
     """
     Inserta varios registros en la tabla a partir de una lista de diccionarios.
     """
@@ -463,4 +465,58 @@ def resetear_propietarios_jugadores(conn):
 
     cursor = conn.cursor()
     cursor.execute("UPDATE jugadores SET usuario_id = NULL")
+    conn.commit()
+
+def agregar_campos(tabla, campos_dict, conn):
+    """
+    Agrega campos a una tabla de forma dinámica.
+    :param tabla: str, nombre de la tabla
+    :param campos_dict: dict, ejemplo {"modificationDate": "DATE", "otroCampo": "TEXT"}
+    :param db_path: str, ruta de la base de datos
+    """
+    cursor = conn.cursor()
+
+    for campo, tipo in campos_dict.items():
+        sql = f"ALTER TABLE {tabla} ADD COLUMN {campo} {tipo}"
+        try:
+            cursor.execute(sql)
+            print(f"Campo '{campo}' agregado correctamente a la tabla '{tabla}'")
+        except sqlite3.OperationalError as e:
+            print(f"No se pudo agregar el campo '{campo}': {e}")
+
+    conn.commit()
+
+def procesar_movimientos_jugadores(movimientos_jugadores, conn):
+    """
+    Procesa los movimientos de jugadores: elimina e inserta en la BBDD.
+    movimientos_jugadores: lista con diccionarios { "recordsToDelete": [...], "recordsToInsert": [...] }
+    conn: conexión SQLite
+    """
+    cursor = conn.cursor()
+
+    for movimiento in movimientos_jugadores:
+        # 🔴 Borrar registros
+        if "recordsToDelete" in movimiento:
+            ids_a_borrar = movimiento["recordsToDelete"]
+            if ids_a_borrar:  # comprobamos que la lista no esté vacía
+                cursor.executemany("DELETE FROM jugadores WHERE id = ?", [(id_val,) for id_val in ids_a_borrar])
+                print(f"🗑️ Borrados {len(ids_a_borrar)} jugadores")
+
+        # 🟢 Insertar registros
+        if "recordsToInsert" in movimiento:
+            jugadores_a_insertar = movimiento["recordsToInsert"]
+            if jugadores_a_insertar:
+                for jugador in jugadores_a_insertar:
+                    cursor.execute("""
+                        INSERT INTO jugadores (nombre, posicion, equipo, valor, usuario_id)
+                        VALUES (?, ?, ?, ?, ?)
+                    """, (
+                        jugador.get("nombre"),
+                        jugador.get("posicion"),
+                        jugador.get("equipo"),
+                        jugador.get("valor", 0),        # valor por defecto si no existe
+                        jugador.get("usuario_id", None) # puede ser null
+                    ))
+                print(f"✅ Insertados {len(jugadores_a_insertar)} jugadores")
+
     conn.commit()
