@@ -56,7 +56,7 @@ def crear_tablas_si_no_existen(conn):
         CREATE TABLE IF NOT EXISTS jugadores (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             usuario_id INTEGER,
-            nombre TEXT,
+            nombre TEXT UNIQUE NOT NULL,
             valor REAL,
             posicion TEXT,
             equipo TEXT,
