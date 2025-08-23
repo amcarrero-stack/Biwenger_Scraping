@@ -17,7 +17,7 @@ locale.setlocale(locale.LC_TIME, "C")
 # borrar_todos_los_movimientos(conn)
 
 # ACTUALIZAR DATOS DE LA TABLA
-conn = get_db_connection()
+# conn = get_db_connection()
 # datos_to_update = [
 #     {"id": 97, "modificationDate": "2025-08-16", "saldo": -3039410, "num_jugadores": 13},
 #     {"id": 98, "modificationDate": "2025-08-16", "saldo": 2447900, "num_jugadores": 11},
@@ -29,27 +29,27 @@ conn = get_db_connection()
 #     {"id": 104, "modificationDate": "2025-08-16", "saldo": -2883008, "num_jugadores": 13}
 # ]
 
-datos_to_update = [
-    {"id": 209, "modificationDate": "2025-08-21 00:00:00"},
-    {"id": 210, "modificationDate": "2025-08-21 00:00:00"},
-    {"id": 211, "modificationDate": "2025-08-21 00:00:00"},
-    {"id": 212, "modificationDate": "2025-08-21 00:00:00"},
-    {"id": 213, "modificationDate": "2025-08-21 00:00:00"},
-    {"id": 214, "modificationDate": "2025-08-21 00:00:00"},
-    {"id": 215, "modificationDate": "2025-08-21 00:00:00"},
-    {"id": 216, "modificationDate": "2025-08-21 00:00:00"}
-]
-
-actualizar_varios(
-    conn,
-    "usuarios",
-    datos_to_update,
-    condicion_campo="id"
-)
-cerrar_BBDD(conn)
+# datos_to_update = [
+#     {"id": 209, "modificationDate": "2025-08-21 00:00:00"},
+#     {"id": 210, "modificationDate": "2025-08-21 00:00:00"},
+#     {"id": 211, "modificationDate": "2025-08-21 00:00:00"},
+#     {"id": 212, "modificationDate": "2025-08-21 00:00:00"},
+#     {"id": 213, "modificationDate": "2025-08-21 00:00:00"},
+#     {"id": 214, "modificationDate": "2025-08-21 00:00:00"},
+#     {"id": 215, "modificationDate": "2025-08-21 00:00:00"},
+#     {"id": 216, "modificationDate": "2025-08-21 00:00:00"}
+# ]
+#
+# actualizar_varios(
+#     conn,
+#     "usuarios",
+#     datos_to_update,
+#     condicion_campo="id"
+# )
+# cerrar_BBDD(conn)
 
 # INSERTA DATOS EN UNA TABLA
-conn = get_db_connection()
+# conn = get_db_connection()
 # movimientos_realizados = [
 #     {"usuario_id": "8", "tipo":"fichaje", "jugador": "Tullido", "cantidad": 200000, "fecha":"13 ago 2025"},
 #     {"usuario_id": "12", "tipo": "venta", "jugador": "Mbappe", "cantidad": -20000000, "fecha": "13 ago 2025"},
@@ -57,11 +57,11 @@ conn = get_db_connection()
 # ]
 # insertar_varios(conn, "movimientos", movimientos_realizados)
 
-jugadores = [
-    {"nombre": "Badé", "posicion": "Defensa", "equipo": "Sevilla"}
-]
-insertar_varios(conn, "jugadores", jugadores)
-cerrar_BBDD(conn)
+# jugadores = [
+#     {"nombre": "Badé", "posicion": "Defensa", "equipo": "Sevilla"}
+# ]
+# insertar_varios(conn, "jugadores", jugadores)
+# cerrar_BBDD(conn)
 
 
 # conn = get_db_connection()
@@ -163,9 +163,9 @@ cerrar_BBDD(conn)
 # delete_registros_table(conn, 'jugadores')
 # cerrar_BBDD(conn)
 
-# conn = get_db_connection()
-# agregar_campos('jugadores', {"href": "TEXT"}, conn)
-# cerrar_BBDD(conn)
+conn = get_db_connection()
+agregar_campos('jugadores', {"modificationDate": "DATE"}, conn)
+cerrar_BBDD(conn)
 
 
 # # CARGA INICIAL DE TODOS LOS JUGADORES
