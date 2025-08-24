@@ -267,22 +267,83 @@ def obtener_movimientos_abonos(conn, driver, user_dict):
         for post in all_posts:
             card_h3 = post.find_element(By.CSS_SELECTOR, "h3")
             card_type = card_h3.text.strip()
-            numero_de_jornada_text = card_h3.find_element(By.CSS_SELECTOR, "a").text.strip()
-            numero_de_jornada_int = int(numero_de_jornada_text.split(' ')[1])
-            if (num_ultima_jornada == 'none' or numero_de_jornada_int > num_ultima_jornada) and "Fin de" in card_type:
-                time_relative = post.find_element(By.CSS_SELECTOR, "time-relative")
-                fecha_sin_formato = time_relative.get_attribute("title")
-                post_date = datetime.strptime(fecha_sin_formato, "%d/%m/%y, %H:%M")
-                tr_list = post.find_elements(By.CSS_SELECTOR, 'div.content tr')
-                for row in tr_list:
-                    td_list = row.find_elements(By.CSS_SELECTOR, 'td')
-                    user_name = td_list[1].find_element(By.CSS_SELECTOR, "a").text
-                    valor = td_list[3].find_element(By.CSS_SELECTOR, "increment").text.replace(" €", "").replace(".", "")
-                    abono = {'usuario_id': user_dict[user_name], 'tipo': 'abono', 'jugador': numero_de_jornada_text, 'cantidad': int(valor), 'fecha': str(post_date)}
-                    moviemientos_abonos.append(abono)
+            if "Fin de" in card_type:
+                numero_de_jornada_text = card_h3.find_element(By.CSS_SELECTOR, "a").text.strip()
+                numero_de_jornada_int = int(numero_de_jornada_text.split(' ')[1])
+                if (num_ultima_jornada == 'none' or numero_de_jornada_int > num_ultima_jornada):
+                    time_relative = post.find_element(By.CSS_SELECTOR, "time-relative")
+                    fecha_sin_formato = time_relative.get_attribute("title")
+                    post_date = datetime.strptime(fecha_sin_formato, "%d/%m/%y, %H:%M")
+                    tr_list = post.find_elements(By.CSS_SELECTOR, 'div.content tr')
+                    for row in tr_list:
+                        td_list = row.find_elements(By.CSS_SELECTOR, 'td')
+                        user_name = td_list[1].find_element(By.CSS_SELECTOR, "a").text
+                        valor = td_list[3].find_element(By.CSS_SELECTOR, "increment").text.replace(" €", "").replace(".", "")
+                        abono = {'usuario_id': user_dict[user_name], 'tipo': 'abono', 'jugador': numero_de_jornada_text, 'cantidad': int(valor), 'fecha': str(post_date)}
+                        moviemientos_abonos.append(abono)
     except Exception as e:
-        print("❌ El div.prueba no existe en el primer card")
+        print(f"❌ Excepcion en obtener_movimientos_abonos: {e}")
     return moviemientos_abonos
+
+def obtener_movimientos_jugadores(posts, jugadores_dict):
+    log_message_with_print("🌐 Obteniendo movimientos jugadores a partir de los post...")
+    conn = get_db_connection()
+    movimientos_jugadores = []
+    movimientos_to_insert =[]
+    movimientos_to_delete = []
+    for i, post in enumerate(posts, start=1):
+        try:
+            header_div = post.find_element(By.CSS_SELECTOR, "div.header.ng-star-inserted")
+            children = header_div.find_elements(By.XPATH, "./*")
+
+            for child in children:
+                tag = child.tag_name  # Nombre del tag (div, a, span...)
+                text = child.text  # Texto interno
+                href = child.get_attribute("href")  # Valor del atributo href (si existe)
+                class_name = child.get_attribute("class")  # Clases CSS
+
+                print(f"TAG: {tag} | TEXTO: {text} | HREF: {href} | CLASS: {class_name}")
+
+
+            h3_element = header_div.find_element(By.TAG_NAME, "h3")
+            cardName = h3_element.text.strip()
+            if cardName == 'MOVIMIENTO DE JUGADORES':
+                try:
+                    log_message(f"\n📌 Post {i}:")
+                    log_message(f"   - {h3_element.text.strip()}")
+                    player_movements_div = post.find_element(By.CSS_SELECTOR, "div.content.playerMovements")
+                    players = player_movements_div.find_elements(By.TAG_NAME, 'li')
+                    for player in players:
+                        player_name = player.find_element(By.CSS_SELECTOR, "div.main h3 a").text.strip()
+                        accion = player.find_element(By.CSS_SELECTOR, "div.content").text.strip()
+                        if "Ha abandonado" in accion:
+                            if jugadores_dict and player_name in jugadores_dict:
+                                movimientos_to_delete.append(jugadores_dict[player_name])
+                                print(f'El jugador {player_name} ha abandonado la competicion')
+                            continue
+                        if player_name not in jugadores_dict:
+                            equipo_a = player.find_element(By.CSS_SELECTOR, "div.content team-link a")
+                            nombre_equipo = equipo_a.get_attribute("title")
+                            player_position = player.find_element(By.CSS_SELECTOR, "div.position player-position")
+                            position = player_position.get_attribute("title")
+                            player_href = player.find_element(By.CSS_SELECTOR, "div.flex-center.basic.ng-star-inserted a")
+                            href = player_href.get_attribute("href")
+                            print(f'El jugador {player_name} ha sido fichado por {nombre_equipo}')
+                            movimiento = {"nombre": player_name, "posicion": position, "equipo": nombre_equipo, 'href': href}
+                            movimientos_to_insert.append(movimiento)
+                except Exception as e:
+                    log_message(f"   ⚠️ Excepcion en MERCADO DE FICHAJES: {e}")
+
+        except Exception as e:
+            log_message(f"   ⚠️ No se pudo encontrar el h3 esperado: {e}")
+
+    print(f'movimientos_to_delete es: {movimientos_to_delete}')
+    if movimientos_to_delete:
+        movimientos_jugadores.append({"recordsToDelete": movimientos_to_delete})
+    print(f'movimientos_to_insert es: {movimientos_to_insert}')
+    if movimientos_to_insert:
+        movimientos_jugadores.append({"recordsToInsert": movimientos_to_insert})
+    return movimientos_jugadores
 
 def has_header_name(post):
     hasHeaderName = True

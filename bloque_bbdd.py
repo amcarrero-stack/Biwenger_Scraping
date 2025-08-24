@@ -493,3 +493,38 @@ def agregar_campos(tabla, campos_dict, conn):
             print(f"No se pudo agregar el campo '{campo}': {e}")
 
     conn.commit()
+
+def procesar_movimientos_jugadores(movimientos_jugadores, conn):
+    """
+    Procesa los movimientos de jugadores: elimina e inserta en la BBDD.
+    movimientos_jugadores: lista con diccionarios { "recordsToDelete": [...], "recordsToInsert": [...] }
+    conn: conexión SQLite
+    """
+    cursor = conn.cursor()
+
+    for movimiento in movimientos_jugadores:
+        # 🔴 Borrar registros
+        if "recordsToDelete" in movimiento:
+            ids_a_borrar = movimiento["recordsToDelete"]
+            if ids_a_borrar:  # comprobamos que la lista no esté vacía
+                cursor.executemany("DELETE FROM jugadores WHERE id = ?", [(id_val,) for id_val in ids_a_borrar])
+                print(f"🗑️ Borrados {len(ids_a_borrar)} jugadores")
+
+        # 🟢 Insertar registros
+        if "recordsToInsert" in movimiento:
+            jugadores_a_insertar = movimiento["recordsToInsert"]
+            if jugadores_a_insertar:
+                for jugador in jugadores_a_insertar:
+                    cursor.execute("""
+                        INSERT INTO jugadores (nombre, posicion, equipo, valor, usuario_id)
+                        VALUES (?, ?, ?, ?, ?)
+                    """, (
+                        jugador.get("nombre"),
+                        jugador.get("posicion"),
+                        jugador.get("equipo"),
+                        jugador.get("valor", 0),        # valor por defecto si no existe
+                        jugador.get("usuario_id", None) # puede ser null
+                    ))
+                print(f"✅ Insertados {len(jugadores_a_insertar)} jugadores")
+
+    conn.commit()

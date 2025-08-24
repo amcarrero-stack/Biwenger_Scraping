@@ -1,5 +1,5 @@
 from utils import log_message, crear_driver, print_usuarios, iniciar_log, log_message_with_print
-from bloque_1_selenium import get_posts_until_date, obtenerMovimientos, do_login, do_obtener_usuarios, set_all_players, number_of_players, obtener_movimientos_abonos
+from bloque_1_selenium import *
 from bloque_bbdd import *
 import traceback
 
@@ -14,7 +14,8 @@ def main():
         driver = crear_driver()
         log_message_with_print("🌐 Navegando a la página principal de Biwenger...")
         do_login(driver)
-        input("🔒 Cierra todas las ventanas emergentes en el navegador y pulsa Enter para continuar...")
+        time.sleep(3)
+        # input("🔒 Cierra todas las ventanas emergentes en el navegador y pulsa Enter para continuar...")
         jugadores_actuales = obtener_registros_tabla(conn, 'jugadores', ['id', 'nombre'], '', '')
         if not jugadores_actuales:
             jugadores_to_insert = set_all_players(driver)
@@ -34,7 +35,13 @@ def main():
         posts = get_posts_until_date(driver, modification_date)
         log_message(f"Se han recogido {len(posts)} movimientos hasta {modification_date}")
         movimientos_to_insert = obtenerMovimientos(posts)
+
+        jugadores_actuales = obtener_registros_tabla(conn, 'jugadores', ['id', 'nombre'])
+        movimientos_jugadores = obtener_movimientos_jugadores(posts, obtener_jugadores_dict(jugadores_actuales))
+        procesar_movimientos_jugadores(movimientos_jugadores, conn)
+
         movimientos_to_insert += obtener_movimientos_abonos(conn, driver, user_dict)
+
         log_message(f"movimientos_to_insert es: {movimientos_to_insert}")
         insertar_varios(conn, 'movimientos', movimientos_to_insert)
 
