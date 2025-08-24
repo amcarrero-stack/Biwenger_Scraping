@@ -60,8 +60,8 @@ def crear_tablas_si_no_existen(conn):
             valor REAL,
             posicion TEXT,
             equipo TEXT,
-            modificationDate DATE,
             href TEXT,
+            modificationDate DATE,
             FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
         )
     ''')
@@ -170,19 +170,27 @@ def obtener_movimientos_hoy(conn):
 
     return cursor.fetchall()
 
-def obtener_registros_tabla(conn, tabla, campos=None):
+def obtener_registros_tabla(conn, tabla, campos=None, where=None, orderby=None):
     cursor = conn.cursor()
 
+    # Selección de columnas
     if campos and len(campos) > 0:
         columnas = ", ".join(campos)
     else:
         columnas = "*"
 
+    # Construcción de la query
     query = f"SELECT {columnas} FROM {tabla}"
+    if where and where.strip() != "":
+        query += f" WHERE {where}"
+    if orderby and orderby.strip() != "":
+        query += f" ORDER BY {orderby}"
+
     cursor.execute(query)
     registros = cursor.fetchall()
 
     return registros
+
 
 def obtener_jugadores_dict(jugadores):
     # Crear diccionario: key = name, value = id
@@ -320,7 +328,7 @@ def insertar_registro(conn, tabla, valores):
     conn.commit()
 
 def insertar_varios(conn, tabla, lista_valores):
-    # log_message_with_print("🌐 Insertando movimientos post...")
+    log_message_with_print("🌐 Insertando movimientos post...")
     """
     Inserta varios registros en la tabla a partir de una lista de diccionarios.
     """

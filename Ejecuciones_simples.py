@@ -8,13 +8,13 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import Select
 locale.setlocale(locale.LC_TIME, "C")
 
-# # BORRAR USUARIOS
-# conn = get_db_connection()
-# borrar_todos_los_usuarios(conn)
-# print_usuarios(obtener_userinfo_bbdd(conn))
-#
-# # BORRAR MOVIMIENTOS
-# borrar_todos_los_movimientos(conn)
+# BORRAR USUARIOS
+conn = get_db_connection()
+borrar_todos_los_usuarios(conn)
+print_usuarios(obtener_userinfo_bbdd(conn))
+
+# BORRAR MOVIMIENTOS
+borrar_todos_los_movimientos(conn)
 
 # ACTUALIZAR DATOS DE LA TABLA
 # conn = get_db_connection()
@@ -30,14 +30,14 @@ locale.setlocale(locale.LC_TIME, "C")
 # ]
 
 # datos_to_update = [
-#     {"id": 209, "modificationDate": "2025-08-21 00:00:00"},
-#     {"id": 210, "modificationDate": "2025-08-21 00:00:00"},
-#     {"id": 211, "modificationDate": "2025-08-21 00:00:00"},
-#     {"id": 212, "modificationDate": "2025-08-21 00:00:00"},
-#     {"id": 213, "modificationDate": "2025-08-21 00:00:00"},
-#     {"id": 214, "modificationDate": "2025-08-21 00:00:00"},
-#     {"id": 215, "modificationDate": "2025-08-21 00:00:00"},
-#     {"id": 216, "modificationDate": "2025-08-21 00:00:00"}
+#     {"id": 241, "modificationDate": "2025-08-21 00:00:00"},
+#     {"id": 242, "modificationDate": "2025-08-21 00:00:00"},
+#     {"id": 243, "modificationDate": "2025-08-21 00:00:00"},
+#     {"id": 244, "modificationDate": "2025-08-21 00:00:00"},
+#     {"id": 245, "modificationDate": "2025-08-21 00:00:00"},
+#     {"id": 246, "modificationDate": "2025-08-21 00:00:00"},
+#     {"id": 247, "modificationDate": "2025-08-21 00:00:00"},
+#     {"id": 248, "modificationDate": "2025-08-21 00:00:00"}
 # ]
 #
 # actualizar_varios(
@@ -163,9 +163,9 @@ locale.setlocale(locale.LC_TIME, "C")
 # delete_registros_table(conn, 'jugadores')
 # cerrar_BBDD(conn)
 
-conn = get_db_connection()
-agregar_campos('jugadores', {"modificationDate": "DATE"}, conn)
-cerrar_BBDD(conn)
+# conn = get_db_connection()
+# agregar_campos('jugadores', {"modificationDate": "DATE"}, conn)
+# cerrar_BBDD(conn)
 
 
 # # CARGA INICIAL DE TODOS LOS JUGADORES

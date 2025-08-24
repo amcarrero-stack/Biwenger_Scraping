@@ -16,6 +16,10 @@ def main():
         do_login(driver)
         time.sleep(3)
         # input("🔒 Cierra todas las ventanas emergentes en el navegador y pulsa Enter para continuar...")
+        jugadores_actuales = obtener_registros_tabla(conn, 'jugadores', ['id', 'nombre'], '', '')
+        if not jugadores_actuales:
+            jugadores_to_insert = set_all_players(driver)
+            insertar_varios(conn, 'jugadores', jugadores_to_insert)
 
         usuarios_actuales = do_obtener_usuarios(driver)
         log_message(f"Usuarios detectados: {[u['name'] for u in usuarios_actuales]}")
@@ -31,10 +35,12 @@ def main():
         posts = get_posts_until_date(driver, modification_date)
         log_message(f"Se han recogido {len(posts)} movimientos hasta {modification_date}")
         movimientos_to_insert = obtenerMovimientos(posts)
-        # movimientos_to_insert += obtener_movimientos_abonos(driver, user_dict)
+
         jugadores_actuales = obtener_registros_tabla(conn, 'jugadores', ['id', 'nombre'])
         movimientos_jugadores = obtener_movimientos_jugadores(posts, obtener_jugadores_dict(jugadores_actuales))
         procesar_movimientos_jugadores(movimientos_jugadores, conn)
+
+        movimientos_to_insert += obtener_movimientos_abonos(conn, driver, user_dict)
 
         log_message(f"movimientos_to_insert es: {movimientos_to_insert}")
         insertar_varios(conn, 'movimientos', movimientos_to_insert)
