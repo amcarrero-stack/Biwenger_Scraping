@@ -21,12 +21,12 @@ def main():
             jugadores_to_insert = set_all_players(driver)
             insertar_varios(conn, 'jugadores', jugadores_to_insert)
 
-        usuarios_actuales = do_obtener_usuarios(driver)
-        log_message(f"Usuarios detectados: {[u['name'] for u in usuarios_actuales]}")
+        # usuarios_actuales = do_obtener_usuarios(driver)
+        # log_message(f"Usuarios detectados: {[u['name'] for u in usuarios_actuales]}")
         usuarios_db = obtener_userinfo_bbdd(conn)
-        if not usuarios_db:
-            insertar_usuarios(conn, usuarios_actuales)
-            usuarios_db = obtener_userinfo_bbdd(conn)
+        # if not usuarios_db:
+        #     insertar_usuarios(conn, usuarios_actuales)
+        #     usuarios_db = obtener_userinfo_bbdd(conn)
         modification_date = usuarios_db[0][5]
         user_dict = obtener_userIds(conn)
         user_names_dict = obtener_userNames(conn)
@@ -34,25 +34,30 @@ def main():
 
         posts = get_posts_until_date(driver, modification_date)
         log_message(f"Se han recogido {len(posts)} movimientos hasta {modification_date}")
-        movimientos_to_insert = obtenerMovimientos(posts)
+        posts_wrapper = obtener_posts_wrapper(posts)
+        movimientos = procesar_posts(posts_wrapper, user_dict)
+        print(movimientos)
 
-        jugadores_actuales = obtener_registros_tabla(conn, 'jugadores', ['id', 'nombre'])
-        movimientos_jugadores = obtener_movimientos_jugadores(posts, obtener_jugadores_dict(jugadores_actuales))
-        procesar_movimientos_jugadores(movimientos_jugadores, conn)
 
-        movimientos_to_insert += obtener_movimientos_abonos(conn, driver, user_dict)
-
-        log_message(f"movimientos_to_insert es: {movimientos_to_insert}")
-        insertar_varios(conn, 'movimientos', movimientos_to_insert)
-
-        resumen_movimientos = obtener_resumen_movimientos(conn, user_dict, modification_date)
-        log_message(resumen_movimientos)
-        log_message(f"Resumen movimientos por usuario: {resumen_movimientos}")
-        saldos_actualizados = obtener_saldos_actualizados(conn, resumen_movimientos)
-        log_message(f"Saldos actualizados: {print_saldos_actualizados(conn, saldos_actualizados)}")
-        actualizar_saldos_new(conn, saldos_actualizados)
-        resetear_propietarios_jugadores(conn)
-        actualizar_propietarios_jugadores(conn, usuarios_actuales)
+        # movimientos_to_insert = obtenerMovimientos(posts, user_dict)
+        #
+        # jugadores_actuales = obtener_registros_tabla(conn, 'jugadores', ['id', 'nombre'])
+        # movimientos_jugadores = obtener_movimientos_jugadores(posts, obtener_jugadores_dict(jugadores_actuales))
+        # procesar_movimientos_jugadores(movimientos_jugadores, conn)
+        #
+        # movimientos_to_insert += obtener_movimientos_abonos(conn, driver, user_dict)
+        #
+        # log_message(f"movimientos_to_insert es: {movimientos_to_insert}")
+        # insertar_varios(conn, 'movimientos', movimientos_to_insert)
+        #
+        # resumen_movimientos = obtener_resumen_movimientos(conn, user_dict, modification_date)
+        # log_message(resumen_movimientos)
+        # log_message(f"Resumen movimientos por usuario: {resumen_movimientos}")
+        # saldos_actualizados = obtener_saldos_actualizados(conn, resumen_movimientos)
+        # log_message(f"Saldos actualizados: {print_saldos_actualizados(conn, saldos_actualizados)}")
+        # actualizar_saldos_new(conn, saldos_actualizados)
+        # resetear_propietarios_jugadores(conn)
+        # actualizar_propietarios_jugadores(conn, usuarios_actuales)
 
     except Exception as e:
         log_message_with_print(f"❌ Error durante la ejecución: {e}")

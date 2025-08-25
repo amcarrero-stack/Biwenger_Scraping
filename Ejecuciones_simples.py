@@ -8,16 +8,16 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import Select
 locale.setlocale(locale.LC_TIME, "C")
 
-# BORRAR USUARIOS
-conn = get_db_connection()
-borrar_todos_los_usuarios(conn)
-print_usuarios(obtener_userinfo_bbdd(conn))
-
-# BORRAR MOVIMIENTOS
-borrar_todos_los_movimientos(conn)
+# # BORRAR USUARIOS
+# conn = get_db_connection()
+# borrar_todos_los_usuarios(conn)
+# print_usuarios(obtener_userinfo_bbdd(conn))
+#
+# # BORRAR MOVIMIENTOS
+# borrar_todos_los_movimientos(conn)
 
 # ACTUALIZAR DATOS DE LA TABLA
-# conn = get_db_connection()
+conn = get_db_connection()
 # datos_to_update = [
 #     {"id": 97, "modificationDate": "2025-08-16", "saldo": -3039410, "num_jugadores": 13},
 #     {"id": 98, "modificationDate": "2025-08-16", "saldo": 2447900, "num_jugadores": 11},
@@ -29,24 +29,24 @@ borrar_todos_los_movimientos(conn)
 #     {"id": 104, "modificationDate": "2025-08-16", "saldo": -2883008, "num_jugadores": 13}
 # ]
 
-# datos_to_update = [
-#     {"id": 241, "modificationDate": "2025-08-21 00:00:00"},
-#     {"id": 242, "modificationDate": "2025-08-21 00:00:00"},
-#     {"id": 243, "modificationDate": "2025-08-21 00:00:00"},
-#     {"id": 244, "modificationDate": "2025-08-21 00:00:00"},
-#     {"id": 245, "modificationDate": "2025-08-21 00:00:00"},
-#     {"id": 246, "modificationDate": "2025-08-21 00:00:00"},
-#     {"id": 247, "modificationDate": "2025-08-21 00:00:00"},
-#     {"id": 248, "modificationDate": "2025-08-21 00:00:00"}
-# ]
-#
-# actualizar_varios(
-#     conn,
-#     "usuarios",
-#     datos_to_update,
-#     condicion_campo="id"
-# )
-# cerrar_BBDD(conn)
+datos_to_update = [
+    {"id": 249, "modificationDate": "2025-08-20 00:00:00"},
+    {"id": 250, "modificationDate": "2025-08-20 00:00:00"},
+    {"id": 251, "modificationDate": "2025-08-20 00:00:00"},
+    {"id": 252, "modificationDate": "2025-08-20 00:00:00"},
+    {"id": 253, "modificationDate": "2025-08-20 00:00:00"},
+    {"id": 254, "modificationDate": "2025-08-20 00:00:00"},
+    {"id": 255, "modificationDate": "2025-08-20 00:00:00"},
+    {"id": 256, "modificationDate": "2025-08-20 00:00:00"}
+]
+
+actualizar_varios(
+    conn,
+    "usuarios",
+    datos_to_update,
+    condicion_campo="id"
+)
+cerrar_BBDD(conn)
 
 # INSERTA DATOS EN UNA TABLA
 # conn = get_db_connection()
