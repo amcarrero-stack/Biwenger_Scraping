@@ -2,14 +2,18 @@ from flask import Flask, jsonify, render_template
 from flask_cors import CORS
 import sqlite3
 import os
+
+# Crear app
 app = Flask(__name__)
 CORS(app)
 
+# Ruta a la base de datos, se puede configurar vía variable de entorno
 DB_PATH = os.environ.get("DB_PATH", "Biwenger_BBDD.sqlite")
 
 def get_conn():
     return sqlite3.connect(DB_PATH)
 
+# Rutas API
 @app.route("/api/usuarios")
 def api_usuarios():
     conn = get_conn()
@@ -30,6 +34,12 @@ def api_jugadores(usuario_id):
     conn.close()
     return jsonify(jugadores)
 
+# Ruta web
 @app.route("/")
 def index():
     return render_template("index.html")
+
+# Solo necesario para pruebas locales
+if __name__ == "__main__":
+    # Cambiar host y puerto para probar localmente
+    app.run(host="0.0.0.0", port=10000, debug=True)
