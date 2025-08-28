@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Biwenger Info</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-900 text-white min-h-screen p-6">
+    <h1 class="text-3xl font-bold mb-4">Biwenger INFO</h1>
+
+    <!-- Selector de usuarios -->
+    <select id="usuarioSelect" class="mb-6 p-2 rounded bg-gray-800 text-white">
+        <option value="">Selecciona un usuario</option>
+    </select>
+
+    <!-- Contenedor de cards -->
+    <div id="cardsContainer" class="grid grid-cols-1 md:grid-cols-2 gap-6"></div>
+
+    <script>
+    async function loadUsuarios() {
+        const res = await fetch("/api/usuarios");
+        const usuarios = await res.json();
+        const select = document.getElementById("usuarioSelect");
+        usuarios.forEach(u => {
+            const option = document.createElement("option");
+            option.value = u.id;
+            option.textContent = u.name;
+            select.appendChild(option);
+        });
+        select.addEventListener("change", loadCards);
+    }
+
+    async function loadCards() {
+        const usuarioId = document.getElementById("usuarioSelect").value;
+        if (!usuarioId) return;
+        const res = await fetch(`/api/jugadores/${usuarioId}`);
+        const jugadores = await res.json();
+        const container = document.getElementById("cardsContainer");
+        container.innerHTML = "";
+
+        // Card grande estilo campo de fútbol
+        const campoCard = document.createElement("div");
+        campoCard.className = "bg-green-800 rounded-lg p-4";
+        campoCard.innerHTML = "<h2 class='text-xl font-bold mb-2'>Plantilla</h2>";
+        jugadores.forEach(j => {
+            const jugadorDiv = document.createElement("div");
+            jugadorDiv.className = "bg-gray-700 p-2 rounded mb-1";
+            jugadorDiv.textContent = `${j.nombre} - ${j.equipo} - ${j.posicion} - ${j.valor}`;
+            campoCard.appendChild(jugadorDiv);
+        });
+        container.appendChild(campoCard);
+
+        // Card pequeña con saldo
+        const saldoCard = document.createElement("div");
+        saldoCard.className = "bg-gray-800 rounded-lg p-4 mt-4";
+        saldoCard.innerHTML = `<h2 class="text-lg font-bold">Saldo: ${jugadores[0]?.usuario_saldo ?? '0'}M</h2>`;
+        container.appendChild(saldoCard);
+    }
+
+    loadUsuarios();
+    </script>
+</body>
+</html>
