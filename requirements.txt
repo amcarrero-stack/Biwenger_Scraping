@@ -1,6 +1,5 @@
 flask
 flask-cors
-sqlite3   # aunque sqlite3 viene con Python, no hace falta ponerlo
 pandas
 requests
 selenium

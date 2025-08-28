@@ -1,11 +1,11 @@
 from flask import Flask, jsonify, render_template
 from flask_cors import CORS
 import sqlite3
-
+import os
 app = Flask(__name__)
 CORS(app)
 
-DB_PATH = "Biwenger_BBDD.sqlite"  # o la ruta a tu sqlite
+DB_PATH = os.environ.get("DB_PATH", "Biwenger_BBDD.sqlite")
 
 def get_conn():
     return sqlite3.connect(DB_PATH)
