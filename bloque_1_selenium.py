@@ -10,7 +10,7 @@ from collections import Counter
 from bloque_bbdd import get_db_connection, obtener_userIds, obtener_registros_tabla
 from utils import traducir_mes, log_message, log_message_with_print
 import os
-from wrappers import Post, Ventas, Fichajes, Clausulazos, Abonos
+from wrappers import Post, Ventas, Fichajes, Clausulazos, Abonos, Penalizaciones, Movimientos
 locale.setlocale(locale.LC_TIME, "C")
 # Variable global del módulo
 
@@ -70,17 +70,13 @@ def do_obtener_usuarios(driver):
                 nombre_jugador = jugador.find_element(By.CSS_SELECTOR, "div.main h3 a").text.strip()
                 plantilla_to_ret.append(nombre_jugador)
 
-            # usuario = {
-            #     "name": nombre,
-            #     "url_name": href,
-            #     "num_jug": int(num_jug),
-            #     "plantilla": plantilla_to_ret
-            # }
             usuario = {
                 "name": nombre,
                 "url_name": href,
-                "num_jug": int(num_jug)
+                "num_jug": int(num_jug),
+                "plantilla": plantilla_to_ret
             }
+
             usuarios.append(usuario)
             boton_atras = driver.find_element(By.CSS_SELECTOR, "div.header i")
             boton_atras.click()
@@ -269,92 +265,25 @@ def obtener_posts_wrapper(posts):
     for i, post in enumerate(posts, start=1):
         post_wrapper_list.append(Post(post))
     return post_wrapper_list
-def obtener_movimientos_abonos(conn, driver, user_dict):
-    select_element = driver.find_element(By.CSS_SELECTOR, "div.tools select.pl")
-    select_obj = Select(select_element)
-    select_obj.select_by_visible_text("Jornadas")
-    time.sleep(2)
-    moviemientos_abonos = []
-    try:
-        all_posts = driver.find_elements(By.CSS_SELECTOR, 'league-board-post')
-        movimientos = obtener_registros_tabla(conn, 'movimientos', ['jugador'], "jugador LIKE 'Jornada%'", "jugador DESC")
-        num_ultima_jornada = 'none'
-        if movimientos:
-            jornada_text = str(movimientos[0][0])
-            num_ultima_jornada = int(jornada_text.split(' ')[1])
 
-        for post in all_posts:
-            card_h3 = post.find_element(By.CSS_SELECTOR, "h3")
-            card_type = card_h3.text.strip()
-            if "Fin de" in card_type:
-                numero_de_jornada_text = card_h3.find_element(By.CSS_SELECTOR, "a").text.strip()
-                numero_de_jornada_int = int(numero_de_jornada_text.split(' ')[1])
-                if (num_ultima_jornada == 'none' or numero_de_jornada_int > num_ultima_jornada):
-                    time_relative = post.find_element(By.CSS_SELECTOR, "time-relative")
-                    fecha_sin_formato = time_relative.get_attribute("title")
-                    post_date = datetime.strptime(fecha_sin_formato, "%d/%m/%y, %H:%M")
-                    tr_list = post.find_elements(By.CSS_SELECTOR, 'div.content tr')
-                    for row in tr_list:
-                        td_list = row.find_elements(By.CSS_SELECTOR, 'td')
-                        user_name = td_list[1].find_element(By.CSS_SELECTOR, "a").text
-                        valor = td_list[3].find_element(By.CSS_SELECTOR, "increment").text.replace(" €", "").replace(".", "")
-                        abono = {'usuario_id': user_dict[user_name], 'tipo': 'abono', 'jugador': numero_de_jornada_text, 'cantidad': int(valor), 'fecha': str(post_date)}
-                        moviemientos_abonos.append(abono)
-    except Exception as e:
-        print(f"❌ Excepcion en obtener_movimientos_abonos: {e}")
-    return moviemientos_abonos
-
-def obtener_movimientos_jugadores(posts, jugadores_dict):
+def obtener_movimientos_jugadores(movimientos_bbdd, jugadores_dict):
     log_message_with_print("🌐 Obteniendo movimientos jugadores a partir de los post...")
     conn = get_db_connection()
     movimientos_jugadores = []
     movimientos_to_insert =[]
     movimientos_to_delete = []
-    for i, post in enumerate(posts, start=1):
-        try:
-            header_div = post.find_element(By.CSS_SELECTOR, "div.header.ng-star-inserted")
-            children = header_div.find_elements(By.XPATH, "./*")
-
-            for child in children:
-                tag = child.tag_name  # Nombre del tag (div, a, span...)
-                text = child.text  # Texto interno
-                href = child.get_attribute("href")  # Valor del atributo href (si existe)
-                class_name = child.get_attribute("class")  # Clases CSS
-
-                print(f"TAG: {tag} | TEXTO: {text} | HREF: {href} | CLASS: {class_name}")
-
-
-            h3_element = header_div.find_element(By.TAG_NAME, "h3")
-            cardName = h3_element.text.strip()
-            if cardName == 'MOVIMIENTO DE JUGADORES':
-                try:
-                    log_message(f"\n📌 Post {i}:")
-                    log_message(f"   - {h3_element.text.strip()}")
-                    player_movements_div = post.find_element(By.CSS_SELECTOR, "div.content.playerMovements")
-                    players = player_movements_div.find_elements(By.TAG_NAME, 'li')
-                    for player in players:
-                        player_name = player.find_element(By.CSS_SELECTOR, "div.main h3 a").text.strip()
-                        accion = player.find_element(By.CSS_SELECTOR, "div.content").text.strip()
-                        if "Ha abandonado" in accion:
-                            if jugadores_dict and player_name in jugadores_dict:
-                                movimientos_to_delete.append(jugadores_dict[player_name])
-                                print(f'El jugador {player_name} ha abandonado la competicion')
-                            continue
-                        if player_name not in jugadores_dict:
-                            equipo_a = player.find_element(By.CSS_SELECTOR, "div.content team-link a")
-                            nombre_equipo = equipo_a.get_attribute("title")
-                            player_position = player.find_element(By.CSS_SELECTOR, "div.position player-position")
-                            position = player_position.get_attribute("title")
-                            player_href = player.find_element(By.CSS_SELECTOR, "div.flex-center.basic.ng-star-inserted a")
-                            href = player_href.get_attribute("href")
-                            print(f'El jugador {player_name} ha sido fichado por {nombre_equipo}')
-                            movimiento = {"nombre": player_name, "posicion": position, "equipo": nombre_equipo, 'href': href}
-                            movimientos_to_insert.append(movimiento)
-                except Exception as e:
-                    log_message(f"   ⚠️ Excepcion en MERCADO DE FICHAJES: {e}")
-
-        except Exception as e:
-            log_message(f"   ⚠️ No se pudo encontrar el h3 esperado: {e}")
+    for movimiento in movimientos_bbdd:
+        player_name = movimiento['jugador']
+        accion = movimiento['accion'].strip()
+        if "Ha abandonado" in accion:
+            if jugadores_dict and player_name in jugadores_dict:
+                movimientos_to_delete.append(jugadores_dict[player_name])
+                print(f'El jugador {player_name} ha abandonado la competicion')
+            continue
+        if "fichado por" in accion:
+            nombre_equipo = accion.split('fichado por ')[1]
+            movimiento = {"nombre": player_name, "equipo": nombre_equipo}
+            movimientos_to_insert.append(movimiento)
 
     print(f'movimientos_to_delete es: {movimientos_to_delete}')
     if movimientos_to_delete:
@@ -363,6 +292,8 @@ def obtener_movimientos_jugadores(posts, jugadores_dict):
     if movimientos_to_insert:
         movimientos_jugadores.append({"recordsToInsert": movimientos_to_insert})
     return movimientos_jugadores
+
+
 
 def has_header_name(post):
     hasHeaderName = True
@@ -504,36 +435,47 @@ def add_players(driver):
 def procesar_posts(posts_wrapper, user_dict):
     movimientos = []
     for post in posts_wrapper:
-        if isinstance(post.post_returned, Ventas):
-            fecha = post.post_returned.fecha
-            print(f"📉 Es una venta -> {post.post_returned.fecha}")
-            # aquí podrías iterar también por post.post_returned.ventas
-            for venta in post.post_returned.ventas:
-                print(f"   Jugador: {venta.nombre_jugador}, Acción: {venta.accion}")
-                movimientos += procesar_venta(venta, fecha, user_dict)
-        elif isinstance(post.post_returned, Fichajes):
-            fecha = post.post_returned.fecha
-            print(f"📈 Es un fichaje -> {post.post_returned.fecha}")
-            # aquí podrías iterar también por post.post_returned.fichajes
-            for fichaje in post.post_returned.fichajes:
-                print(f"   Jugador: {fichaje.nombre_jugador}, Acción: {fichaje.accion}")
-                movimientos += procesar_fichaje(fichaje, fecha, user_dict)
-        elif isinstance(post.post_returned, Clausulazos):
-            fecha = post.post_returned.fecha
-            print(f"📈 Es un clausulazo -> {post.post_returned.fecha}")
-            # aquí podrías iterar también por post.post_returned.fichajes
-            for clausulazo in post.post_returned.clausulazos:
-                print(f"   Jugador: {clausulazo.nombre_jugador}, Acción: {clausulazo.accion}")
-                movimientos += procesar_clausulazo(clausulazo, fecha, user_dict)
-        elif isinstance(post.post_returned, Abonos):
-            fecha = post.post_returned.fecha
-            print(f"📈 Es un clausulazo -> {post.post_returned.fecha}")
-            # aquí podrías iterar también por post.post_returned.fichajes
-            for abono in post.post_returned.abonos:
-                print(f"   Jugador: {abono.nombre_jugador}, Acción: {abono.accion}")
-                movimientos += procesar_abono(abono, fecha, user_dict)
-        else:
-            print(f"ℹ️ Otro tipo de post")
+        try:
+            if isinstance(post.post_returned, Ventas):
+                fecha = post.post_returned.fecha
+                print(f"📉 Es una venta -> {post.post_returned.fecha}")
+                for venta in post.post_returned.ventas:
+                    print(f"   Jugador: {venta.nombre_jugador}, Acción: {venta.accion}")
+                    movimientos += procesar_venta(venta, fecha, user_dict)
+            elif isinstance(post.post_returned, Fichajes):
+                fecha = post.post_returned.fecha
+                print(f"📈 Es un fichaje -> {post.post_returned.fecha}")
+                for fichaje in post.post_returned.fichajes:
+                    print(f"   Jugador: {fichaje.nombre_jugador}, Acción: {fichaje.accion}")
+                    movimientos += procesar_fichaje(fichaje, fecha, user_dict)
+            elif isinstance(post.post_returned, Clausulazos):
+                fecha = post.post_returned.fecha
+                print(f"📈 Es un clausulazo -> {post.post_returned.fecha}")
+                for clausulazo in post.post_returned.clausulazos:
+                    print(f"   Jugador: {clausulazo.nombre_jugador}, Acción: {clausulazo.accion}")
+                    movimientos += procesar_clausulazo(clausulazo, fecha, user_dict)
+            elif isinstance(post.post_returned, Abonos):
+                fecha = post.post_returned.fecha
+                print(f"📈 Es un abono -> {post.post_returned.fecha}")
+                for abono in post.post_returned.abonos:
+                    print(f"   Jugador: {abono.nombre_jugador}, Acción: {abono.accion}")
+                    movimientos += procesar_abono(abono, fecha, user_dict)
+            elif isinstance(post.post_returned, Penalizaciones):
+                fecha = post.post_returned.fecha
+                print(f"📈 Es una penalizacion -> {post.post_returned.fecha}")
+                for penalizacion in post.post_returned.penalizaciones:
+                    print(f"   Jugador: {penalizacion.nombre_jugador}, Acción: {penalizacion.accion}")
+                    movimientos += procesar_penalizacion(penalizacion, fecha, user_dict)
+            elif isinstance(post.post_returned, Movimientos):
+                fecha = post.post_returned.fecha
+                print(f"📈 Es un movimiento -> {post.post_returned.fecha}")
+                for movimiento in post.post_returned.movimientos:
+                    print(f"   Jugador: {movimiento.nombre_jugador}, Acción: {movimiento.accion}")
+                    movimientos += procesar_movimientos(movimiento, fecha)
+        except Exception as e:
+            print(f"⚠️ Excepcion en procesar_posts: {e.__str__()}")
+            print(type(post))
+
     return movimientos
 def procesar_venta(venta, fecha, user_dict):
     accion = venta.accion
@@ -598,10 +540,29 @@ def procesar_abono(abono, fecha, user_dict):
     accion = abono.accion
     movimientos = []
     if " obtiene " in accion:
-        userNameAbonado = accion.split('  obtiene  ')[0]
-        valor_string = accion.split('  obtiene  ')[0]
+        userNameAbonado = accion.split(' obtiene ')[0]
+        valor_string = accion.split(' obtiene ')[1]
         valor = int(valor_string)
 
-        movimientos.append({"usuario_id": user_dict[userNameAbonado], "tipo": "abono", "jugador": abono.nombre_jugador, "cantidad": valor, "fecha": str(fecha)})
+        movimientos.append({"usuario_id": user_dict[userNameAbonado], "tipo": "abono", "accion": abono.nombre_jugador, "cantidad": valor, "fecha": str(fecha)})
 
     return movimientos
+
+def procesar_penalizacion(penalizacion, fecha, user_dict):
+    accion = penalizacion.accion
+    movimientos = []
+    if " es penalizado con " in accion:
+        userNamePenalizado = accion.split(' es penalizado con ')[0]
+        valor_string = accion.split(' es penalizado con ')[1]
+        valor = int(valor_string)
+
+        movimientos.append({"usuario_id": user_dict[userNamePenalizado], "tipo": "penalizacion", "jugador": '', "cantidad": -valor, "fecha": str(fecha)})
+
+    return movimientos
+
+def procesar_movimientos(movimiento, fecha):
+    accion = movimiento.accion
+    nombre_jugador = movimiento.nombre_jugador
+    movimientos_list = []
+    movimientos_list.append({"tipo": "movimiento", "jugador": nombre_jugador, "accion": accion, "cantidad": 0, "fecha": str(fecha)})
+    return movimientos_list

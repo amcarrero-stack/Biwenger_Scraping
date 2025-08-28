@@ -8,6 +8,10 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import Select
 locale.setlocale(locale.LC_TIME, "C")
 
+# CREAR TABLAS SI NO EXISTEN
+conn = get_db_connection()
+crear_tablas_si_no_existen(conn)
+
 # # BORRAR USUARIOS
 # conn = get_db_connection()
 # borrar_todos_los_usuarios(conn)
@@ -17,7 +21,7 @@ locale.setlocale(locale.LC_TIME, "C")
 # borrar_todos_los_movimientos(conn)
 
 # ACTUALIZAR DATOS DE LA TABLA
-conn = get_db_connection()
+# conn = get_db_connection()
 # datos_to_update = [
 #     {"id": 97, "modificationDate": "2025-08-16", "saldo": -3039410, "num_jugadores": 13},
 #     {"id": 98, "modificationDate": "2025-08-16", "saldo": 2447900, "num_jugadores": 11},
@@ -29,33 +33,36 @@ conn = get_db_connection()
 #     {"id": 104, "modificationDate": "2025-08-16", "saldo": -2883008, "num_jugadores": 13}
 # ]
 
-datos_to_update = [
-    {"id": 249, "modificationDate": "2025-08-20 00:00:00"},
-    {"id": 250, "modificationDate": "2025-08-20 00:00:00"},
-    {"id": 251, "modificationDate": "2025-08-20 00:00:00"},
-    {"id": 252, "modificationDate": "2025-08-20 00:00:00"},
-    {"id": 253, "modificationDate": "2025-08-20 00:00:00"},
-    {"id": 254, "modificationDate": "2025-08-20 00:00:00"},
-    {"id": 255, "modificationDate": "2025-08-20 00:00:00"},
-    {"id": 256, "modificationDate": "2025-08-20 00:00:00"}
-]
+# datos_to_update = [
+#     {"id": 393, "modificationDate": "2025-08-27 22:50:00"},
+#     {"id": 394, "modificationDate": "2025-08-27 22:50:00"},
+#     {"id": 395, "modificationDate": "2025-08-27 22:50:00"},
+#     {"id": 396, "modificationDate": "2025-08-27 22:50:00"},
+#     {"id": 397, "modificationDate": "2025-08-27 22:50:00"},
+#     {"id": 398, "modificationDate": "2025-08-27 22:50:00"},
+#     {"id": 399, "modificationDate": "2025-08-27 22:50:00"},
+#     {"id": 400, "modificationDate": "2025-08-27 22:50:00"}
+# ]
 
-actualizar_varios(
-    conn,
-    "usuarios",
-    datos_to_update,
-    condicion_campo="id"
-)
-cerrar_BBDD(conn)
+# datos_to_update = [
+#     {"id": 1007, "modificationDate": "2025-08-27 13:50:00", "posicion":"portero", "href": "/la-liga/players/ryan"}
+# ]
+
+# actualizar_varios(
+#     conn,
+#     "usuarios",
+#     datos_to_update,
+#     condicion_campo="id"
+# )
+# cerrar_BBDD(conn)
 
 # INSERTA DATOS EN UNA TABLA
 # conn = get_db_connection()
 # movimientos_realizados = [
-#     {"usuario_id": "8", "tipo":"fichaje", "jugador": "Tullido", "cantidad": 200000, "fecha":"13 ago 2025"},
-#     {"usuario_id": "12", "tipo": "venta", "jugador": "Mbappe", "cantidad": -20000000, "fecha": "13 ago 2025"},
-#     {"usuario_id": "13", "tipo":"clausulazo", "jugador": "Vinicius", "cantidad": 15000000, "fecha":"13 ago 2025"},
+#     {"tipo":"movimiento", "jugador": "haciendo una prueba", "cantidad": 0, "fecha":"2025-08-27 08:00:00"}
 # ]
 # insertar_varios(conn, "movimientos", movimientos_realizados)
+# cerrar_BBDD(conn)
 
 # jugadores = [
 #     {"nombre": "Badé", "posicion": "Defensa", "equipo": "Sevilla"}
@@ -175,3 +182,6 @@ cerrar_BBDD(conn)
 #     jugadores_to_insert = set_all_players(driver)
 #     insertar_varios(conn, 'jugadores', jugadores_to_insert)
 #     jugadores_actuales = len(obtener_registros_tabla(conn, 'jugadores'))
+
+
+# print("fichado por   ".strip())

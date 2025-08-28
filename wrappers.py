@@ -123,33 +123,109 @@ class Abonos:
     def __repr__(self):
         return f"<fecha={self.fecha}, fichajes={self.abonos}>"
 
+class Penalizacion:
+    def __init__(self, nombre_jugador, accion):
+        self.nombre_jugador = nombre_jugador
+        self.accion = accion
+    def __repr__(self):
+        return f"<nombre de jugador={self.nombre_jugador}, accion realizada={self.accion} >"
+class Penalizaciones:
+    def __init__(self, post):
+        header_div = post.find_element(By.CSS_SELECTOR, "div.header.ng-star-inserted")
+        date_elem = header_div.find_element(By.CSS_SELECTOR, "div.date")
+        date_str = date_elem.get_attribute("title")
+        post_datetime = traducir_mes(date_str)
+        self.fecha = post_datetime
+        self.penalizaciones = self._parse_penalizaciones(post)
+    def _parse_penalizaciones(self, post):
+        penalizaciones_list = []
+        try:
+            content_bonus_div = post.find_element(By.CSS_SELECTOR, "div.content.bonus")
+            penalizaciones = content_bonus_div.find_elements(By.TAG_NAME, 'tr')
+            for penalizacion in penalizaciones:
+                userlink = penalizacion.find_element(By.TAG_NAME, 'user-link')
+                user_name = userlink.find_element(By.TAG_NAME, 'a').text.strip()
+                decrement = penalizacion.find_element(By.CSS_SELECTOR, "increment.decrement.icon.icon-decrement").text.strip()
+                valor = decrement.replace('.', '').replace('€', '').replace(' ', '')
+                penalizaciones_list.append(Penalizacion('Penalizador', user_name + ' es penalizado con ' + valor))
+        except Exception as e:
+            log_message(f"   ⚠️ Excepcion en parse penalizaciones: {e}")
+        return penalizaciones_list
+    def __repr__(self):
+        return f"<fecha={self.fecha}, fichajes={self.penalizaciones}>"
+
+class Movimiento:
+    def __init__(self, nombre_jugador, accion):
+        self.nombre_jugador = nombre_jugador
+        self.accion = accion
+    def __repr__(self):
+        return f"<nombre de jugador={self.nombre_jugador}, accion realizada={self.accion} >"
+class Movimientos:
+    def __init__(self, post):
+        header_div = post.find_element(By.CSS_SELECTOR, "div.header.ng-star-inserted")
+        date_elem = header_div.find_element(By.CSS_SELECTOR, "div.date")
+        date_str = date_elem.get_attribute("title")
+        post_datetime = traducir_mes(date_str)
+        self.fecha = post_datetime
+        self.movimientos = self._parse_movimientos(post)
+    def _parse_movimientos(self, post):
+        movimientos_list = []
+        player_movements_div = post.find_element(By.CSS_SELECTOR, "div.content.playerMovements")
+        players = player_movements_div.find_elements(By.TAG_NAME, 'li')
+        for player in players:
+            player_name = player.find_element(By.CSS_SELECTOR, "div.main h3 a").text.strip()
+            team_link_list = player.find_elements(By.CSS_SELECTOR, "div.content team-link")
+            accion = ''
+            if len(team_link_list) == 0:
+                accion = ' ha abandonado la competicion'
+            elif len(team_link_list) == 1:
+                team_link = team_link_list[0]
+                a_tag = team_link.find_element(By.TAG_NAME, "a")
+                title = a_tag.get_attribute("title")
+                accion = ' fichado por ' + title
+            elif len(team_link_list) == 2:
+                team_link = team_link_list[0]
+                a_tag = team_link.find_element(By.TAG_NAME, "a")
+                equipo1 = a_tag.get_attribute("title")
+                team_link2 = team_link_list[1]
+                a_tag_2 = team_link2.find_element(By.TAG_NAME, "a")
+                equipo2 = a_tag_2.get_attribute("title")
+                accion = ' transferido de ' + equipo1 + ' a ' + equipo2
+
+            if accion:
+                movimientos_list.append(Movimiento(player_name, accion))
+        return movimientos_list
+    def __repr__(self):
+        return f"<fecha={self.fecha}, fichajes={self.movimientos_list}>"
+
 class Post:
     def __init__(self, post):
         try:
             header_div = post.find_element(By.CSS_SELECTOR, "div.header.ng-star-inserted")
             h3_element = header_div.find_element(By.TAG_NAME, "h3")
             cardName = h3_element.text.strip()
-            post
             if cardName == 'FICHAJES':
-                post = Ventas(post)
+                self.post_returned = Ventas(post)
             elif cardName == 'MERCADO DE FICHAJES':
-                post = Fichajes(post)
+                self.post_returned = Fichajes(post)
             elif cardName == 'CLÁUSULAS':
-                post = Clausulazos(post)
+                self.post_returned = Clausulazos(post)
             elif cardName == 'ABONOS Y PENALIZACIONES':
-                # post = Ventas(post)
+                self.post_returned = Penalizaciones(post)
                 print(cardName)
             elif cardName == 'CAMBIO DE NOMBRE':
                 # post = Ventas(post)
                 print(cardName)
             elif cardName == 'MOVIMIENTO DE JUGADORES':
-                # post = Ventas(post)
-                print(cardName)
-            else:
-                post = Abonos(post)
-
-            self.post_returned = post
+                self.post_returned = Movimientos(post)
         except Exception as e:
-            log_message(f"   ⚠️ No se pudo encontrar el h3 esperado: {e}")
+            error_message = e.__str__()
+            patron = r'(\{"method":".*?"\})'
+            coincidencia = re.search(patron, error_message)
+
+            if coincidencia:
+                json_str_obj = json.loads(coincidencia.group(1))
+                if json_str_obj['method'] == 'css selector' and json_str_obj['selector'] == 'div.header.ng-star-inserted' and "Fin de" in post.find_element(By.CSS_SELECTOR, "div.panel-header h3").text.strip():
+                    self.post_returned = Abonos(post)
     def __repr__(self):
         return f"<post_returned={self.post_returned}>"
