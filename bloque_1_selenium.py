@@ -20,13 +20,13 @@ def do_login(driver):
     time.sleep(3)  # Esperar a que cargue
     web_element_agree = driver.find_elements(By.ID, 'didomi-notice-agree-button')[0]
     web_element_agree.click()
-
+    time.sleep(1)
     web_element_comienzo = driver.find_elements(By.CSS_SELECTOR, 'a.btn.primary.xl[href="/login"]')[0]
     web_element_comienzo.click()
-
+    time.sleep(1)
     web_element_cuentaDisponible = driver.find_elements(By.LINK_TEXT, "Ya tengo cuenta")[0]
     web_element_cuentaDisponible.click()
-
+    time.sleep(1)
     # 👇 Leer credenciales de variables de entorno
     email = os.getenv("BIWENGER_USER")
     password = os.getenv("BIWENGER_PASS")
@@ -146,10 +146,9 @@ def obtener_movimientos_de_jugadores(conn, jugadores_actuales, modification_date
     for movimiento in movimientos_bbdd:
         player_name = movimiento['jugador']
         accion = movimiento['accion'].strip()
-        if "Ha abandonado" in accion:
-            if jugadores_dict and player_name in jugadores_dict:
-                movimientos_to_delete.append(jugadores_dict[player_name])
-                print(f'El jugador {player_name} ha abandonado la competicion')
+        if "ha abandonado" in accion:
+            movimientos_to_delete.append(jugadores_dict[player_name])
+            print(f'El jugador {player_name} ha abandonado la competicion')
             continue
         if "fichado por" in accion:
             nombre_equipo = accion.split('fichado por ')[1]
@@ -158,7 +157,7 @@ def obtener_movimientos_de_jugadores(conn, jugadores_actuales, modification_date
         if "transferido de" in accion:
             equipos = accion.split('transferido de ')[1]
             nombre_equipo = equipos.split(' a ')[1]
-            movimiento = {"id": jugadores_dict[player_name] , "nombre": player_name, "equipo": nombre_equipo}
+            movimiento = {"id": jugadores_dict[player_name], "nombre": player_name, "equipo": nombre_equipo}
             movimientos_to_update.append(movimiento)
 
 

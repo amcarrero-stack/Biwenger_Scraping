@@ -155,9 +155,8 @@ def obtener_registros_tabla(conn, tabla, campos=None, where=None, orderby=None):
     return resultado
 
 def obtener_jugadores_dict(jugadores):
-    # Crear diccionario: key = name, value = id
-    user_dict = {nombre: id for id, nombre in jugadores}
-    return user_dict
+    # Diccionario: key = nombre, value = id
+    return {jugador['nombre']: jugador['id'] for jugador in jugadores}
 
 def actualizar_saldos_new(conn, nuevos_saldos):
     log_message_with_print("🌐 Actualizando los saldos...")
@@ -193,7 +192,7 @@ def actualizar_propietarios_jugadores(conn, array_usuarios):
     # Obtener lista de todos los jugadores desde BBDD (id, nombre)
     cursor.execute("SELECT id, nombre FROM jugadores")
     jugadores_bbdd = cursor.fetchall()
-    jugador_dict = obtener_jugadores_dict(jugadores_bbdd)  # {nombre: id}
+    jugador_dict = {nombre: id for id, nombre in jugadores_bbdd}
 
     for usuario in array_usuarios:
         name = usuario['name']
@@ -402,7 +401,7 @@ def procesar_movimientos_de_jugadores(movimientos_jugadores, conn):
     conn: conexión SQLite
     """
     cursor = conn.cursor()
-
+    fecha_hoy = datetime.today().replace(microsecond=0)
     for movimiento in movimientos_jugadores:
         # 🔴 Borrar registros
         if "recordsToDelete" in movimiento:
@@ -417,14 +416,15 @@ def procesar_movimientos_de_jugadores(movimientos_jugadores, conn):
             if jugadores_a_insertar:
                 for jugador in jugadores_a_insertar:
                     cursor.execute("""
-                        INSERT INTO jugadores (nombre, posicion, equipo, valor, usuario_id)
-                        VALUES (?, ?, ?, ?, ?)
+                        INSERT INTO jugadores (nombre, posicion, equipo, valor, usuario_id, modificationDate)
+                        VALUES (?, ?, ?, ?, ?, ?)
                     """, (
                         jugador.get("nombre"),
                         jugador.get("posicion", None),
                         jugador.get("equipo"),
                         jugador.get("valor", 0),        # valor por defecto si no existe
-                        jugador.get("usuario_id", None) # puede ser null
+                        jugador.get("usuario_id", None), # puede ser null
+                        fecha_hoy
                     ))
                 print(f"✅ Insertados {len(jugadores_a_insertar)} jugadores")
 
@@ -435,11 +435,12 @@ def procesar_movimientos_de_jugadores(movimientos_jugadores, conn):
                 for jugador in jugadores_a_actualizar:
                     cursor.execute("""
                         UPDATE jugadores
-                        SET nombre = ?, equipo = ?
+                        SET nombre = ?, equipo = ?, modificationDate= ?
                         WHERE id = ?
                     """, (
                         jugador.get("nombre"),
                         jugador.get("equipo"),
+                        fecha_hoy,
                         jugador.get("id")
                     ))
                 print(f"🔄 Actualizados {len(jugadores_a_actualizar)} jugadores")

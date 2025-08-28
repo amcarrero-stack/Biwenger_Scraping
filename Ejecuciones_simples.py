@@ -33,14 +33,14 @@ conn = get_db_connection()
 # ]
 
 datos_to_update = [
-    {"id": 401, "modificationDate": "2025-08-28 15:00:00"},
-    {"id": 402, "modificationDate": "2025-08-28 15:00:00"},
-    {"id": 403, "modificationDate": "2025-08-28 15:00:00"},
-    {"id": 404, "modificationDate": "2025-08-28 15:00:00"},
-    {"id": 405, "modificationDate": "2025-08-28 15:00:00"},
-    {"id": 406, "modificationDate": "2025-08-28 15:00:00"},
-    {"id": 407, "modificationDate": "2025-08-28 15:00:00"},
-    {"id": 408, "modificationDate": "2025-08-28 15:00:00"}
+    {"id": 401,"saldo": 2642640, "modificationDate": "2025-08-28 15:00:00"},
+    {"id": 402,"saldo": 1135900, "modificationDate": "2025-08-28 15:00:00"},
+    {"id": 403,"saldo": 3526358, "modificationDate": "2025-08-28 15:00:00"},
+    {"id": 404,"saldo": 1284060, "modificationDate": "2025-08-28 15:00:00"},
+    {"id": 405,"saldo": 2128960, "modificationDate": "2025-08-28 15:00:00"},
+    {"id": 406,"saldo": 913579, "modificationDate": "2025-08-28 15:00:00"},
+    {"id": 407,"saldo": -309468, "modificationDate": "2025-08-28 15:00:00"},
+    {"id": 408,"saldo": 276620, "modificationDate": "2025-08-28 15:00:00"}
 ]
 
 # datos_to_update = [
