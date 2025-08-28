@@ -8,16 +8,19 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import Select
 locale.setlocale(locale.LC_TIME, "C")
 
-# BORRAR USUARIOS
-conn = get_db_connection()
-borrar_todos_los_usuarios(conn)
-print_usuarios(obtener_userinfo_bbdd(conn))
+# CREAR TABLAS SI NO EXISTEN
+# conn = get_db_connection()
+# crear_tablas_si_no_existen(conn)
 
-# BORRAR MOVIMIENTOS
-borrar_todos_los_movimientos(conn)
+# # BORRAR USUARIOS
+# conn = get_db_connection()
+# borrar_todos_los_usuarios(conn)
+#
+# # BORRAR MOVIMIENTOS
+# borrar_todos_los_movimientos(conn)
 
 # ACTUALIZAR DATOS DE LA TABLA
-# conn = get_db_connection()
+conn = get_db_connection()
 # datos_to_update = [
 #     {"id": 97, "modificationDate": "2025-08-16", "saldo": -3039410, "num_jugadores": 13},
 #     {"id": 98, "modificationDate": "2025-08-16", "saldo": 2447900, "num_jugadores": 11},
@@ -30,32 +33,46 @@ borrar_todos_los_movimientos(conn)
 # ]
 
 # datos_to_update = [
-#     {"id": 241, "modificationDate": "2025-08-21 00:00:00"},
-#     {"id": 242, "modificationDate": "2025-08-21 00:00:00"},
-#     {"id": 243, "modificationDate": "2025-08-21 00:00:00"},
-#     {"id": 244, "modificationDate": "2025-08-21 00:00:00"},
-#     {"id": 245, "modificationDate": "2025-08-21 00:00:00"},
-#     {"id": 246, "modificationDate": "2025-08-21 00:00:00"},
-#     {"id": 247, "modificationDate": "2025-08-21 00:00:00"},
-#     {"id": 248, "modificationDate": "2025-08-21 00:00:00"}
+#     {"id": 401, "modificationDate": "2025-08-28 07:44:21"},
+#     {"id": 402, "modificationDate": "2025-08-28 07:44:21"},
+#     {"id": 403, "modificationDate": "2025-08-28 07:44:21"},
+#     {"id": 404, "modificationDate": "2025-08-28 07:44:21"},
+#     {"id": 405, "modificationDate": "2025-08-28 07:44:21"},
+#     {"id": 406, "modificationDate": "2025-08-28 07:44:21"},
+#     {"id": 407, "modificationDate": "2025-08-28 07:44:21"},
+#     {"id": 408, "modificationDate": "2025-08-28 07:44:21"}
 # ]
-#
-# actualizar_varios(
-#     conn,
-#     "usuarios",
-#     datos_to_update,
-#     condicion_campo="id"
-# )
-# cerrar_BBDD(conn)
+
+datos_to_update = [
+    {"id": 401, "saldo": 2642640, "modificationDate": "2025-08-28 07:44:21"},
+    {"id": 402, "saldo": 1135900, "modificationDate": "2025-08-28 07:44:21"},
+    {"id": 403, "saldo": 2210158, "modificationDate": "2025-08-28 07:44:21"},
+    {"id": 404, "saldo": 1284060, "modificationDate": "2025-08-28 07:44:21"},
+    {"id": 405, "saldo": 2128960, "modificationDate": "2025-08-28 07:44:21"},
+    {"id": 406, "saldo": 913579, "modificationDate": "2025-08-28 07:44:21"},
+    {"id": 407, "saldo": -309468, "modificationDate": "2025-08-28 07:44:21"},
+    {"id": 408, "saldo": 276620, "modificationDate": "2025-08-28 07:44:21"}
+]
+
+# datos_to_update = [
+#     {"id": 403, "saldo": 2210158}
+# ]
+
+actualizar_varios(
+    conn,
+    "usuarios",
+    datos_to_update,
+    condicion_campo="id"
+)
+cerrar_BBDD(conn)
 
 # INSERTA DATOS EN UNA TABLA
 # conn = get_db_connection()
 # movimientos_realizados = [
-#     {"usuario_id": "8", "tipo":"fichaje", "jugador": "Tullido", "cantidad": 200000, "fecha":"13 ago 2025"},
-#     {"usuario_id": "12", "tipo": "venta", "jugador": "Mbappe", "cantidad": -20000000, "fecha": "13 ago 2025"},
-#     {"usuario_id": "13", "tipo":"clausulazo", "jugador": "Vinicius", "cantidad": 15000000, "fecha":"13 ago 2025"},
+#     {"tipo":"movimiento", "jugador": "haciendo una prueba", "cantidad": 0, "fecha":"2025-08-27 08:00:00"}
 # ]
 # insertar_varios(conn, "movimientos", movimientos_realizados)
+# cerrar_BBDD(conn)
 
 # jugadores = [
 #     {"nombre": "Badé", "posicion": "Defensa", "equipo": "Sevilla"}
@@ -175,3 +192,65 @@ borrar_todos_los_movimientos(conn)
 #     jugadores_to_insert = set_all_players(driver)
 #     insertar_varios(conn, 'jugadores', jugadores_to_insert)
 #     jugadores_actuales = len(obtener_registros_tabla(conn, 'jugadores'))
+
+
+# print("fichado por   ".strip())
+
+
+def borrar_todos_los_usuarios(conn):
+    try:
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM usuarios")
+        conn.commit()
+        print("Todos los usuarios han sido eliminados.")
+    except Exception as e:
+        print(f"Error al borrar los usuarios {e}")
+def borrar_todos_los_movimientos(conn):
+    try:
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM movimientos")
+        conn.commit()
+        print("Todos los movimientos han sido eliminados.")
+    except Exception as e:
+        print(f"Error al borrar los movimientos {e}")
+
+def delete_registros_table(conn, table):
+    try:
+        cursor = conn.cursor()
+        cursor.execute(f"DELETE FROM {table}")
+        conn.commit()
+        print(f"Todos los registros de {table} han sido eliminados.")
+    except Exception as e:
+        print(f"Error al borrar los movimientos {e}")
+
+def obtener_movimientos_hoy(conn):
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM movimientos WHERE fecha = date('now')")
+
+    return cursor.fetchall()
+
+def delete_movimientos(conn, movimientos):
+    cursor = conn.cursor()
+    for mov in movimientos:
+        # Aquí asumo que el id del movimiento está en la primera posición de la tupla
+        cursor.execute("DELETE FROM movimientos WHERE id = ?", (mov[0],))
+    conn.commit()
+
+def agregar_campos(tabla, campos_dict, conn):
+    """
+    Agrega campos a una tabla de forma dinámica.
+    :param tabla: str, nombre de la tabla
+    :param campos_dict: dict, ejemplo {"modificationDate": "DATE", "otroCampo": "TEXT"}
+    :param db_path: str, ruta de la base de datos
+    """
+    cursor = conn.cursor()
+
+    for campo, tipo in campos_dict.items():
+        sql = f"ALTER TABLE {tabla} ADD COLUMN {campo} {tipo}"
+        try:
+            cursor.execute(sql)
+            print(f"Campo '{campo}' agregado correctamente a la tabla '{tabla}'")
+        except sqlite3.OperationalError as e:
+            print(f"No se pudo agregar el campo '{campo}': {e}")
+
+    conn.commit()
