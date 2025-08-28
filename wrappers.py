@@ -101,9 +101,12 @@ class Abono:
         return f"<nombre de jugador={self.nombre_jugador}, accion realizada={self.accion} >"
 class Abonos:
     def __init__(self, post):
-        time_relative = post.find_element(By.CSS_SELECTOR, "time-relative")
-        fecha_sin_formato = time_relative.get_attribute("title")
-        post_datetime = datetime.strptime(fecha_sin_formato, "%d/%m/%y, %H:%M")
+        time_relatives = post.find_elements(By.CSS_SELECTOR, "time-relative")
+        post_datetime = datetime.today().replace(microsecond=0)
+        if time_relatives:
+            fecha_sin_formato = time_relatives[0].get_attribute("title")
+            post_datetime = datetime.strptime(fecha_sin_formato, "%d/%m/%y, %H:%M")
+
         self.fecha = post_datetime
         self.abonos = self._parse_abonos(post)
     def _parse_abonos(self, post):
