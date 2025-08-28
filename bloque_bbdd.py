@@ -15,6 +15,8 @@ def get_db_connection():
     conn = sqlite3.connect(DB_PATH)
     return conn
 
+def cerrar_BBDD(conn):
+    conn.close()
 def crear_tablas_si_no_existen(conn):
     cursor = conn.cursor()
     cursor.execute('''
@@ -98,56 +100,6 @@ def insertar_usuarios(conn, usuarios):
         ''', (name, url_name, saldo, saldo, num_jugadores, fecha_inicio_sql))
     conn.commit()
 
-def borrar_todos_los_usuarios(conn):
-    try:
-        cursor = conn.cursor()
-        cursor.execute("DELETE FROM usuarios")
-        conn.commit()
-        print("Todos los usuarios han sido eliminados.")
-    except Exception as e:
-        print(f"Error al borrar los usuarios {e}")
-
-
-def borrar_todos_los_movimientos(conn):
-    try:
-        cursor = conn.cursor()
-        cursor.execute("DELETE FROM movimientos")
-        conn.commit()
-        print("Todos los movimientos han sido eliminados.")
-    except Exception as e:
-        print(f"Error al borrar los movimientos {e}")
-
-def delete_registros_table(conn, table):
-    try:
-        cursor = conn.cursor()
-        cursor.execute(f"DELETE FROM {table}")
-        conn.commit()
-        print(f"Todos los registros de {table} han sido eliminados.")
-    except Exception as e:
-        print(f"Error al borrar los movimientos {e}")
-
-def obtener_userinfo_bbdd(conn):
-    cursor = conn.cursor()
-    cursor.execute("""
-        SELECT id, name, saldo, url_name, num_jugadores, modificationDate
-        FROM usuarios
-    """)
-    usuarios = cursor.fetchall()
-
-    # Convertir la fecha a datetime.date si viene como string
-    usuarios_convertidos = []
-    for u in usuarios:
-        fecha = u[5]
-        if isinstance(fecha, str):
-            fecha = datetime.strptime(fecha, "%Y-%m-%d %H:%M:%S")
-        usuarios_convertidos.append((
-            u[0], u[1], u[2], u[3], u[4], fecha
-        ))
-
-    return usuarios_convertidos
-
-
-
 def obtener_userIds(conn):
     cursor = conn.cursor()
     cursor.execute("SELECT id, name FROM usuarios")
@@ -174,12 +126,6 @@ def obtener_saldos(conn):
     # Crear diccionario: key = name, value = id
     user_dict = {uid: saldo for uid, saldo in usuarios}
     return user_dict
-
-def obtener_movimientos_hoy(conn):
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM movimientos WHERE fecha = date('now')")
-
-    return cursor.fetchall()
 
 def obtener_registros_tabla(conn, tabla, campos=None, where=None, orderby=None):
     cursor = conn.cursor()
@@ -208,29 +154,10 @@ def obtener_registros_tabla(conn, tabla, campos=None, where=None, orderby=None):
 
     return resultado
 
-
-
 def obtener_jugadores_dict(jugadores):
     # Crear diccionario: key = name, value = id
     user_dict = {nombre: id for id, nombre in jugadores}
     return user_dict
-
-def delete_movimientos(conn, movimientos):
-    cursor = conn.cursor()
-    for mov in movimientos:
-        # Aquí asumo que el id del movimiento está en la primera posición de la tupla
-        cursor.execute("DELETE FROM movimientos WHERE id = ?", (mov[0],))
-    conn.commit()
-
-def delete_movimientos(conn, movimientos):
-    cursor = conn.cursor()
-    for mov in movimientos:
-        # Aquí asumo que el id del movimiento está en la primera posición de la tupla
-        cursor.execute("DELETE FROM movimientos WHERE id = ?", (mov[0],))
-    conn.commit()
-
-def cerrar_BBDD(conn):
-    conn.close()
 
 def actualizar_saldos_new(conn, nuevos_saldos):
     log_message_with_print("🌐 Actualizando los saldos...")
@@ -328,23 +255,6 @@ def actualizar_varios(conn, tabla, lista_valores, condicion_campo):
         condicion_valor = item.pop(condicion_campo)
         actualizar_registro(conn, tabla, item, condicion_campo, condicion_valor)
 
-
-# def insertar_registro(conn, tabla, valores):
-#     """
-#     Inserta un registro en la tabla de forma dinámica.
-#
-#     conn: conexión sqlite3
-#     tabla: str → nombre de la tabla
-#     valores: dict → {'campo1': valor1, 'campo2': valor2, ...}
-#     """
-#     campos = ", ".join(valores.keys())
-#     placeholders = ", ".join(["?"] * len(valores))
-#     query = f"INSERT INTO {tabla} ({campos}) VALUES ({placeholders})"
-#
-#     cursor = conn.cursor()
-#     cursor.execute(query, list(valores.values()))
-#     conn.commit()
-
 def insertar_registro(conn, tabla, valores):
     """
     Inserta un registro en la tabla de forma dinámica.
@@ -432,7 +342,7 @@ def obtener_resumen_movimientos(conn, user_dict, fecha_inicio_str):
         resumen['abonos'] = cursor.fetchone()[0]
 
         resultados.append(resumen)
-
+    log_message(f"Resumen movimientos por usuario: {resultados}")
     return resultados
 def obtener_saldos_actualizados(conn, movimientos):
     log_message_with_print("🌐 Obteniendo los saldos actualizados...")
@@ -462,6 +372,7 @@ def obtener_saldos_actualizados(conn, movimientos):
         # Guardar el saldo final en el diccionario
         saldos_actuales[usuario_id] = saldo_final
 
+    log_message(f"Saldos actualizados: {print_saldos_actualizados(conn, saldos_actuales)}")
     return saldos_actuales
 
 def print_saldos_actualizados(conn, dict_id_saldos):
@@ -474,35 +385,6 @@ def print_saldos_actualizados(conn, dict_id_saldos):
 
     return dict_username_saldos
 
-
-def obtener_saldos_actualizados_hoy(conn, movimientos):
-    # Obtener saldos actuales de la BBDD
-    saldos_actuales = obtener_saldos(conn)  # {usuario_id: saldo}
-
-    # Recorrer cada movimiento y actualizar el saldo
-    for mov in movimientos:
-        usuario_id = mov['usuario_id']
-
-        if usuario_id not in saldos_actuales:
-            log_message(f"⚠ Usuario {usuario_id} no encontrado en BBDD, se omite.")
-            continue
-
-        saldo_inicial = saldos_actuales[usuario_id]
-
-        # Aplicar sumas y restas
-        saldo_final = (
-                saldo_inicial
-                - mov.get('ventas', 0)
-                - mov.get('clausulazos', 0)
-                - mov.get('fichajes', 0)  # ya viene negativo
-                - mov.get('penalizaciones', 0)  # ya viene negativo
-        )
-
-        # Guardar el saldo final en el diccionario
-        saldos_actuales[usuario_id] = saldo_final
-
-    return saldos_actuales
-
 def resetear_propietarios_jugadores(conn):
     """
     Establece usuario_id a NULL para todos los jugadores en la tabla jugadores.
@@ -513,26 +395,7 @@ def resetear_propietarios_jugadores(conn):
     cursor.execute("UPDATE jugadores SET usuario_id = NULL")
     conn.commit()
 
-def agregar_campos(tabla, campos_dict, conn):
-    """
-    Agrega campos a una tabla de forma dinámica.
-    :param tabla: str, nombre de la tabla
-    :param campos_dict: dict, ejemplo {"modificationDate": "DATE", "otroCampo": "TEXT"}
-    :param db_path: str, ruta de la base de datos
-    """
-    cursor = conn.cursor()
-
-    for campo, tipo in campos_dict.items():
-        sql = f"ALTER TABLE {tabla} ADD COLUMN {campo} {tipo}"
-        try:
-            cursor.execute(sql)
-            print(f"Campo '{campo}' agregado correctamente a la tabla '{tabla}'")
-        except sqlite3.OperationalError as e:
-            print(f"No se pudo agregar el campo '{campo}': {e}")
-
-    conn.commit()
-
-def procesar_movimientos_jugadores(movimientos_jugadores, conn):
+def procesar_movimientos_de_jugadores(movimientos_jugadores, conn):
     """
     Procesa los movimientos de jugadores: elimina e inserta en la BBDD.
     movimientos_jugadores: lista con diccionarios { "recordsToDelete": [...], "recordsToInsert": [...] }
