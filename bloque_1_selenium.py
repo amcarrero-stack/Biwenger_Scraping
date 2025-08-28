@@ -1,6 +1,8 @@
 from config import URL_BIWENGER_HOME, URL_BIWENGER_LIGA, URL_BIWENGER_PLAYERS
 import time
 import locale
+import re
+import json
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import Select
 from datetime import datetime, date
@@ -8,6 +10,7 @@ from collections import Counter
 from bloque_bbdd import get_db_connection, obtener_userIds, obtener_registros_tabla
 from utils import traducir_mes, log_message, log_message_with_print
 import os
+from wrappers import Post, Ventas, Fichajes, Clausulazos, Abonos, Penalizaciones, Movimientos
 locale.setlocale(locale.LC_TIME, "C")
 # Variable global del módulo
 
@@ -73,6 +76,7 @@ def do_obtener_usuarios(driver):
                 "num_jug": int(num_jug),
                 "plantilla": plantilla_to_ret
             }
+
             usuarios.append(usuario)
             boton_atras = driver.find_element(By.CSS_SELECTOR, "div.header i")
             boton_atras.click()
@@ -95,18 +99,30 @@ def get_posts_until_date(driver, cutoff_datetime):
         postToRet = []
         for post in all_posts:
             try:
-                date_elem = post.find_element(By.CSS_SELECTOR, "div.date")
+                header_div = post.find_element(By.CSS_SELECTOR, "div.header.ng-star-inserted")
+                h3_element = header_div.find_element(By.TAG_NAME, "h3")
+                cardName = h3_element.text.strip()
+                date_elem = header_div.find_element(By.CSS_SELECTOR, "div.date")
                 date_str = date_elem.get_attribute("title")  # Ej: "29 jul 2025, 13:37:05"
                 if not date_str:
                     continue
                 post_datetime = traducir_mes(date_str)
-                if is_a_valid_post(post) and post_datetime < cutoff_datetime:
+                validPost = is_a_valid_post(cardName)
+                if validPost and post_datetime < cutoff_datetime:
                     repetir = False
                     break
-                if is_a_valid_post(post):
+                if validPost:
                     postToRet.append(post)
 
-            except Exception:
+            except Exception as e:
+                error_message = e.__str__()
+                patron = r'(\{"method":".*?"\})'
+                coincidencia = re.search(patron, error_message)
+
+                if coincidencia:
+                    json_str_obj = json.loads(coincidencia.group(1))
+                    if json_str_obj['method'] == 'css selector' and json_str_obj['selector'] == 'div.header.ng-star-inserted' and "Fin de" in post.find_element(By.CSS_SELECTOR, "div.panel-header h3").text.strip():
+                        postToRet.append(post)
                 continue
         # Hacemos scroll para cargar más posts
         driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
@@ -118,20 +134,13 @@ def get_posts_until_date(driver, cutoff_datetime):
         last_height = new_height
     return postToRet
 
-def is_a_valid_post(league_board_post):
-    try:
-        header_div = league_board_post.find_element(By.CSS_SELECTOR, "div.header.ng-star-inserted")
-        h3_element = header_div.find_element(By.TAG_NAME, "h3")
-        cardName = h3_element.text.strip()
-        return cardName == 'MERCADO DE FICHAJES' or cardName == 'FICHAJES' or cardName == 'CAMBIO DE NOMBRE' or cardName == 'CLÁUSULAS' or cardName == 'ABONOS Y PENALIZACIONES' or cardName == 'MOVIMIENTO DE JUGADORES'
-    except Exception as e:
-        log_message(f"⚠️ No se pudo encontrar el h3 esperado")
+def is_a_valid_post(cardName):
+    return cardName == 'MERCADO DE FICHAJES' or cardName == 'FICHAJES' or cardName == 'CAMBIO DE NOMBRE' or cardName == 'CLÁUSULAS' or cardName == 'ABONOS Y PENALIZACIONES' or cardName == 'MOVIMIENTO DE JUGADORES'
 
-def obtenerMovimientos(posts):
+def obtenerMovimientos(posts, user_dict):
     log_message_with_print("🌐 Obteniendo movimientos a partir de los post...")
     movimientos_to_insert = []
     conn = get_db_connection()
-    user_dict = obtener_userIds(conn)
     for i, post in enumerate(posts, start=1):
         try:
             header_div = post.find_element(By.CSS_SELECTOR, "div.header.ng-star-inserted")
@@ -147,6 +156,7 @@ def obtenerMovimientos(posts):
                     log_message(f"   - {h3_element.text.strip()} ({date_str})")
                     merc_fichajes_div = post.find_element(By.CSS_SELECTOR, "div.content.market")
                     fichajes = merc_fichajes_div.find_elements(By.TAG_NAME, 'li')
+                    fichajes_list = []
                     for fichaje in fichajes:
                         fichajeH3 = fichaje.find_element(By.TAG_NAME, "h3")
                         fichajeName = fichajeH3.text.strip()
@@ -249,93 +259,31 @@ def obtenerMovimientos(posts):
         except Exception as e:
             log_message(f"   ⚠️ No se pudo encontrar el h3 esperado: {e}")
     return movimientos_to_insert
+def obtener_posts_wrapper(posts):
+    log_message_with_print("🌐 Obteniendo posts wrapper a partir de los post...")
+    post_wrapper_list = []
+    for i, post in enumerate(posts, start=1):
+        post_wrapper_list.append(Post(post))
+    return post_wrapper_list
 
-def obtener_movimientos_abonos(conn, driver, user_dict):
-    select_element = driver.find_element(By.CSS_SELECTOR, "div.tools select.pl")
-    select_obj = Select(select_element)
-    select_obj.select_by_visible_text("Jornadas")
-    time.sleep(2)
-    moviemientos_abonos = []
-    try:
-        all_posts = driver.find_elements(By.CSS_SELECTOR, 'league-board-post')
-        movimientos = obtener_registros_tabla(conn, 'movimientos', ['jugador'], "jugador LIKE 'Jornada%'", "jugador DESC")
-        num_ultima_jornada = 'none'
-        if movimientos:
-            jornada_text = str(movimientos[0][0])
-            num_ultima_jornada = int(jornada_text.split(' ')[1])
-
-        for post in all_posts:
-            card_h3 = post.find_element(By.CSS_SELECTOR, "h3")
-            card_type = card_h3.text.strip()
-            if "Fin de" in card_type:
-                numero_de_jornada_text = card_h3.find_element(By.CSS_SELECTOR, "a").text.strip()
-                numero_de_jornada_int = int(numero_de_jornada_text.split(' ')[1])
-                if (num_ultima_jornada == 'none' or numero_de_jornada_int > num_ultima_jornada):
-                    time_relative = post.find_element(By.CSS_SELECTOR, "time-relative")
-                    fecha_sin_formato = time_relative.get_attribute("title")
-                    post_date = datetime.strptime(fecha_sin_formato, "%d/%m/%y, %H:%M")
-                    tr_list = post.find_elements(By.CSS_SELECTOR, 'div.content tr')
-                    for row in tr_list:
-                        td_list = row.find_elements(By.CSS_SELECTOR, 'td')
-                        user_name = td_list[1].find_element(By.CSS_SELECTOR, "a").text
-                        valor = td_list[3].find_element(By.CSS_SELECTOR, "increment").text.replace(" €", "").replace(".", "")
-                        abono = {'usuario_id': user_dict[user_name], 'tipo': 'abono', 'jugador': numero_de_jornada_text, 'cantidad': int(valor), 'fecha': str(post_date)}
-                        moviemientos_abonos.append(abono)
-    except Exception as e:
-        print(f"❌ Excepcion en obtener_movimientos_abonos: {e}")
-    return moviemientos_abonos
-
-def obtener_movimientos_jugadores(posts, jugadores_dict):
+def obtener_movimientos_jugadores(movimientos_bbdd, jugadores_dict):
     log_message_with_print("🌐 Obteniendo movimientos jugadores a partir de los post...")
     conn = get_db_connection()
     movimientos_jugadores = []
     movimientos_to_insert =[]
     movimientos_to_delete = []
-    for i, post in enumerate(posts, start=1):
-        try:
-            header_div = post.find_element(By.CSS_SELECTOR, "div.header.ng-star-inserted")
-            children = header_div.find_elements(By.XPATH, "./*")
-
-            for child in children:
-                tag = child.tag_name  # Nombre del tag (div, a, span...)
-                text = child.text  # Texto interno
-                href = child.get_attribute("href")  # Valor del atributo href (si existe)
-                class_name = child.get_attribute("class")  # Clases CSS
-
-                print(f"TAG: {tag} | TEXTO: {text} | HREF: {href} | CLASS: {class_name}")
-
-
-            h3_element = header_div.find_element(By.TAG_NAME, "h3")
-            cardName = h3_element.text.strip()
-            if cardName == 'MOVIMIENTO DE JUGADORES':
-                try:
-                    log_message(f"\n📌 Post {i}:")
-                    log_message(f"   - {h3_element.text.strip()}")
-                    player_movements_div = post.find_element(By.CSS_SELECTOR, "div.content.playerMovements")
-                    players = player_movements_div.find_elements(By.TAG_NAME, 'li')
-                    for player in players:
-                        player_name = player.find_element(By.CSS_SELECTOR, "div.main h3 a").text.strip()
-                        accion = player.find_element(By.CSS_SELECTOR, "div.content").text.strip()
-                        if "Ha abandonado" in accion:
-                            if jugadores_dict and player_name in jugadores_dict:
-                                movimientos_to_delete.append(jugadores_dict[player_name])
-                                print(f'El jugador {player_name} ha abandonado la competicion')
-                            continue
-                        if player_name not in jugadores_dict:
-                            equipo_a = player.find_element(By.CSS_SELECTOR, "div.content team-link a")
-                            nombre_equipo = equipo_a.get_attribute("title")
-                            player_position = player.find_element(By.CSS_SELECTOR, "div.position player-position")
-                            position = player_position.get_attribute("title")
-                            player_href = player.find_element(By.CSS_SELECTOR, "div.flex-center.basic.ng-star-inserted a")
-                            href = player_href.get_attribute("href")
-                            print(f'El jugador {player_name} ha sido fichado por {nombre_equipo}')
-                            movimiento = {"nombre": player_name, "posicion": position, "equipo": nombre_equipo, 'href': href}
-                            movimientos_to_insert.append(movimiento)
-                except Exception as e:
-                    log_message(f"   ⚠️ Excepcion en MERCADO DE FICHAJES: {e}")
-
-        except Exception as e:
-            log_message(f"   ⚠️ No se pudo encontrar el h3 esperado: {e}")
+    for movimiento in movimientos_bbdd:
+        player_name = movimiento['jugador']
+        accion = movimiento['accion'].strip()
+        if "Ha abandonado" in accion:
+            if jugadores_dict and player_name in jugadores_dict:
+                movimientos_to_delete.append(jugadores_dict[player_name])
+                print(f'El jugador {player_name} ha abandonado la competicion')
+            continue
+        if "fichado por" in accion:
+            nombre_equipo = accion.split('fichado por ')[1]
+            movimiento = {"nombre": player_name, "equipo": nombre_equipo}
+            movimientos_to_insert.append(movimiento)
 
     print(f'movimientos_to_delete es: {movimientos_to_delete}')
     if movimientos_to_delete:
@@ -344,6 +292,8 @@ def obtener_movimientos_jugadores(posts, jugadores_dict):
     if movimientos_to_insert:
         movimientos_jugadores.append({"recordsToInsert": movimientos_to_insert})
     return movimientos_jugadores
+
+
 
 def has_header_name(post):
     hasHeaderName = True
@@ -481,3 +431,138 @@ def add_players(driver):
             print(f"Error extrayendo jugador: {e}")
 
     return jugadores
+
+def procesar_posts(posts_wrapper, user_dict):
+    movimientos = []
+    for post in posts_wrapper:
+        try:
+            if isinstance(post.post_returned, Ventas):
+                fecha = post.post_returned.fecha
+                print(f"📉 Es una venta -> {post.post_returned.fecha}")
+                for venta in post.post_returned.ventas:
+                    print(f"   Jugador: {venta.nombre_jugador}, Acción: {venta.accion}")
+                    movimientos += procesar_venta(venta, fecha, user_dict)
+            elif isinstance(post.post_returned, Fichajes):
+                fecha = post.post_returned.fecha
+                print(f"📈 Es un fichaje -> {post.post_returned.fecha}")
+                for fichaje in post.post_returned.fichajes:
+                    print(f"   Jugador: {fichaje.nombre_jugador}, Acción: {fichaje.accion}")
+                    movimientos += procesar_fichaje(fichaje, fecha, user_dict)
+            elif isinstance(post.post_returned, Clausulazos):
+                fecha = post.post_returned.fecha
+                print(f"📈 Es un clausulazo -> {post.post_returned.fecha}")
+                for clausulazo in post.post_returned.clausulazos:
+                    print(f"   Jugador: {clausulazo.nombre_jugador}, Acción: {clausulazo.accion}")
+                    movimientos += procesar_clausulazo(clausulazo, fecha, user_dict)
+            elif isinstance(post.post_returned, Abonos):
+                fecha = post.post_returned.fecha
+                print(f"📈 Es un abono -> {post.post_returned.fecha}")
+                for abono in post.post_returned.abonos:
+                    print(f"   Jugador: {abono.nombre_jugador}, Acción: {abono.accion}")
+                    movimientos += procesar_abono(abono, fecha, user_dict)
+            elif isinstance(post.post_returned, Penalizaciones):
+                fecha = post.post_returned.fecha
+                print(f"📈 Es una penalizacion -> {post.post_returned.fecha}")
+                for penalizacion in post.post_returned.penalizaciones:
+                    print(f"   Jugador: {penalizacion.nombre_jugador}, Acción: {penalizacion.accion}")
+                    movimientos += procesar_penalizacion(penalizacion, fecha, user_dict)
+            elif isinstance(post.post_returned, Movimientos):
+                fecha = post.post_returned.fecha
+                print(f"📈 Es un movimiento -> {post.post_returned.fecha}")
+                for movimiento in post.post_returned.movimientos:
+                    print(f"   Jugador: {movimiento.nombre_jugador}, Acción: {movimiento.accion}")
+                    movimientos += procesar_movimientos(movimiento, fecha)
+        except Exception as e:
+            print(f"⚠️ Excepcion en procesar_posts: {e.__str__()}")
+            print(type(post))
+
+    return movimientos
+def procesar_venta(venta, fecha, user_dict):
+    accion = venta.accion
+    movimientos = []
+    if "Cambia por" in accion:
+        string_valor_y_jugadores = accion.split('Cambia por ')[1]
+        valor_string = string_valor_y_jugadores.split(' de ')[0]
+        valor_limpio = valor_string.replace('.', '').replace('€', '').replace(' ', '')
+        valor = int(valor_limpio)
+        userNameVenta = string_valor_y_jugadores.split(' de ')[1].split(' a ')[0].strip()
+        userNameCompra = string_valor_y_jugadores.split(' de ')[1].split(' a ')[1].strip()
+
+        movimientos.append({"usuario_id": user_dict[userNameVenta], "tipo": "venta", "jugador": venta.nombre_jugador,"cantidad": valor, "fecha": str(fecha)})
+        if "Mercado" not in userNameCompra:
+            movimientos.append({"usuario_id": user_dict[userNameCompra], "tipo": "fichaje", "jugador": venta.nombre_jugador, "cantidad": -valor, "fecha": str(fecha)})
+
+    if "Vendido por" in accion:
+        string_valor_y_jugadores = accion.split('Vendido por ')[1]
+        userNameVenta = string_valor_y_jugadores.split(' a ')[0].strip()
+        compra_y_valor = string_valor_y_jugadores.split(' a ')[1].strip()
+        userNameCompra = compra_y_valor.split(' por ')[0]
+        valor_string = compra_y_valor.split(' por ')[1]
+        valor_limpio = valor_string.replace('.', '').replace('€', '').replace(' ', '')
+        valor = int(valor_limpio)
+
+        movimientos.append({"usuario_id": user_dict[userNameVenta], "tipo": "venta", "jugador": venta.nombre_jugador, "cantidad": valor, "fecha": str(fecha)})
+        if "Mercado" not in userNameCompra:
+            movimientos.append({"usuario_id": user_dict[userNameCompra], "tipo": "fichaje", "jugador": venta.nombre_jugador, "cantidad": -valor, "fecha": str(fecha)})
+
+    return movimientos
+def procesar_fichaje(fichaje, fecha, user_dict):
+    accion = fichaje.accion
+    movimientos = []
+    if "Cambia por" in accion:
+        string_valor_y_jugadores = accion.split('Cambia por ')[1]
+        valor_string = string_valor_y_jugadores.split(' a ')[0]
+        valor_limpio = valor_string.replace('.', '').replace('€', '').replace(' ', '')
+        valor = int(valor_limpio)
+        userNameCompra = string_valor_y_jugadores.split(' a ')[1].strip()
+
+        movimientos.append({"usuario_id": user_dict[userNameCompra], "tipo": "fichaje", "jugador": fichaje.nombre_jugador, "cantidad": -valor, "fecha": str(fecha)})
+
+    return movimientos
+
+def procesar_clausulazo(clausulazo, fecha, user_dict):
+    accion = clausulazo.accion
+    movimientos = []
+    if " ha pagado la cláusula de rescisión de " in accion:
+        userNameCompra = accion.split(' ha pagado la cláusula de rescisión de ')[0]
+        string_valor_y_jugador_afectado = accion.split(' ha pagado la cláusula de rescisión de ')[1]
+        valor_string = string_valor_y_jugador_afectado.split(' a ')[0]
+        valor_limpio = valor_string.replace('.', '').replace('€', '').replace(' ', '')
+        valor = int(valor_limpio)
+        userNameVenta = string_valor_y_jugador_afectado.split(' a ')[1].strip()
+
+        movimientos.append({"usuario_id": user_dict[userNameVenta], "tipo": "clausulazo", "jugador": clausulazo.nombre_jugador, "cantidad": valor, "fecha": str(fecha)})
+        movimientos.append({"usuario_id": user_dict[userNameCompra], "tipo": "fichaje", "jugador": clausulazo.nombre_jugador, "cantidad": -valor, "fecha": str(fecha)})
+
+    return movimientos
+
+def procesar_abono(abono, fecha, user_dict):
+    accion = abono.accion
+    movimientos = []
+    if " obtiene " in accion:
+        userNameAbonado = accion.split(' obtiene ')[0]
+        valor_string = accion.split(' obtiene ')[1]
+        valor = int(valor_string)
+
+        movimientos.append({"usuario_id": user_dict[userNameAbonado], "tipo": "abono", "accion": abono.nombre_jugador, "cantidad": valor, "fecha": str(fecha)})
+
+    return movimientos
+
+def procesar_penalizacion(penalizacion, fecha, user_dict):
+    accion = penalizacion.accion
+    movimientos = []
+    if " es penalizado con " in accion:
+        userNamePenalizado = accion.split(' es penalizado con ')[0]
+        valor_string = accion.split(' es penalizado con ')[1]
+        valor = int(valor_string)
+
+        movimientos.append({"usuario_id": user_dict[userNamePenalizado], "tipo": "penalizacion", "jugador": '', "cantidad": -valor, "fecha": str(fecha)})
+
+    return movimientos
+
+def procesar_movimientos(movimiento, fecha):
+    accion = movimiento.accion
+    nombre_jugador = movimiento.nombre_jugador
+    movimientos_list = []
+    movimientos_list.append({"tipo": "movimiento", "jugador": nombre_jugador, "accion": accion, "cantidad": 0, "fecha": str(fecha)})
+    return movimientos_list

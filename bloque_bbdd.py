@@ -44,11 +44,12 @@ def crear_tablas_si_no_existen(conn):
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS movimientos (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            usuario_id INTEGER NOT NULL,
-            tipo TEXT CHECK(tipo IN ('fichaje', 'venta', 'clausulazo', 'abono', 'penalizacion')),
+            usuario_id INTEGER,
+            tipo TEXT CHECK(tipo IN ('fichaje', 'venta', 'clausulazo', 'abono', 'penalizacion', 'movimiento', 'cambioNombre')),
             jugador TEXT,
             cantidad REAL,
             fecha DATE,
+            accion TEXT,
             FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
         )
     ''')
@@ -63,6 +64,16 @@ def crear_tablas_si_no_existen(conn):
             href TEXT,
             modificationDate DATE,
             FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
+        )
+    ''')
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS usuario_jugador_historial (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            usuario_id INT,
+            jugador_id INT,
+            fecha DATE,
+            FOREIGN KEY (usuario_id) REFERENCES usuarios(id),
+            FOREIGN KEY (jugador_id) REFERENCES jugadores(id)
         )
     ''')
     conn.commit()
@@ -189,7 +200,14 @@ def obtener_registros_tabla(conn, tabla, campos=None, where=None, orderby=None):
     cursor.execute(query)
     registros = cursor.fetchall()
 
-    return registros
+    # Obtener nombres de columnas seleccionadas
+    col_names = [desc[0] for desc in cursor.description]
+
+    # Convertir a lista de diccionarios
+    resultado = [dict(zip(col_names, row)) for row in registros]
+
+    return resultado
+
 
 
 def obtener_jugadores_dict(jugadores):
@@ -311,24 +329,44 @@ def actualizar_varios(conn, tabla, lista_valores, condicion_campo):
         actualizar_registro(conn, tabla, item, condicion_campo, condicion_valor)
 
 
+# def insertar_registro(conn, tabla, valores):
+#     """
+#     Inserta un registro en la tabla de forma dinámica.
+#
+#     conn: conexión sqlite3
+#     tabla: str → nombre de la tabla
+#     valores: dict → {'campo1': valor1, 'campo2': valor2, ...}
+#     """
+#     campos = ", ".join(valores.keys())
+#     placeholders = ", ".join(["?"] * len(valores))
+#     query = f"INSERT INTO {tabla} ({campos}) VALUES ({placeholders})"
+#
+#     cursor = conn.cursor()
+#     cursor.execute(query, list(valores.values()))
+#     conn.commit()
+
 def insertar_registro(conn, tabla, valores):
     """
     Inserta un registro en la tabla de forma dinámica.
-
-    conn: conexión sqlite3
-    tabla: str → nombre de la tabla
-    valores: dict → {'campo1': valor1, 'campo2': valor2, ...}
     """
     campos = ", ".join(valores.keys())
     placeholders = ", ".join(["?"] * len(valores))
     query = f"INSERT INTO {tabla} ({campos}) VALUES ({placeholders})"
 
-    cursor = conn.cursor()
-    cursor.execute(query, list(valores.values()))
-    conn.commit()
+    try:
+        cursor = conn.cursor()
+        cursor.execute(query, list(valores.values()))
+        conn.commit()
+        return True  # éxito
+    except sqlite3.IntegrityError as e:
+        print(f"❌ Error de integridad: {e} → {valores}")
+        return False
+    except sqlite3.Error as e:
+        print(f"⚠️ Error SQLite: {e} → {valores}")
+        return False
 
 def insertar_varios(conn, tabla, lista_valores):
-    log_message_with_print("🌐 Insertando movimientos post...")
+    # log_message_with_print("🌐 Insertando movimientos post...")
     """
     Inserta varios registros en la tabla a partir de una lista de diccionarios.
     """
@@ -520,7 +558,7 @@ def procesar_movimientos_jugadores(movimientos_jugadores, conn):
                         VALUES (?, ?, ?, ?, ?)
                     """, (
                         jugador.get("nombre"),
-                        jugador.get("posicion"),
+                        jugador.get("posicion", None),
                         jugador.get("equipo"),
                         jugador.get("valor", 0),        # valor por defecto si no existe
                         jugador.get("usuario_id", None) # puede ser null
@@ -528,3 +566,12 @@ def procesar_movimientos_jugadores(movimientos_jugadores, conn):
                 print(f"✅ Insertados {len(jugadores_a_insertar)} jugadores")
 
     conn.commit()
+
+def insertar_historial_usuarios(conn):
+    users_bbdd = obtener_registros_tabla(conn, 'usuarios', ['id', 'name', 'url_name', 'saldo', 'num_jugadores', 'modificationDate'])
+    historial_list = []
+    for user in users_bbdd:
+        historial_to_insert = {'usuario_id': user['id'], 'saldo': user['saldo'], 'num_jugadores': user['num_jugadores'], 'modificationDate': user['modificationDate']}
+        historial_list.append(historial_to_insert)
+
+    insertar_varios(conn, 'usuarios_historial', historial_list)

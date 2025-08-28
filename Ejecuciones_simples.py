@@ -8,13 +8,17 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import Select
 locale.setlocale(locale.LC_TIME, "C")
 
-# BORRAR USUARIOS
+# CREAR TABLAS SI NO EXISTEN
 conn = get_db_connection()
-borrar_todos_los_usuarios(conn)
-print_usuarios(obtener_userinfo_bbdd(conn))
+crear_tablas_si_no_existen(conn)
 
-# BORRAR MOVIMIENTOS
-borrar_todos_los_movimientos(conn)
+# # BORRAR USUARIOS
+# conn = get_db_connection()
+# borrar_todos_los_usuarios(conn)
+# print_usuarios(obtener_userinfo_bbdd(conn))
+#
+# # BORRAR MOVIMIENTOS
+# borrar_todos_los_movimientos(conn)
 
 # ACTUALIZAR DATOS DE LA TABLA
 # conn = get_db_connection()
@@ -30,16 +34,20 @@ borrar_todos_los_movimientos(conn)
 # ]
 
 # datos_to_update = [
-#     {"id": 241, "modificationDate": "2025-08-21 00:00:00"},
-#     {"id": 242, "modificationDate": "2025-08-21 00:00:00"},
-#     {"id": 243, "modificationDate": "2025-08-21 00:00:00"},
-#     {"id": 244, "modificationDate": "2025-08-21 00:00:00"},
-#     {"id": 245, "modificationDate": "2025-08-21 00:00:00"},
-#     {"id": 246, "modificationDate": "2025-08-21 00:00:00"},
-#     {"id": 247, "modificationDate": "2025-08-21 00:00:00"},
-#     {"id": 248, "modificationDate": "2025-08-21 00:00:00"}
+#     {"id": 393, "modificationDate": "2025-08-27 22:50:00"},
+#     {"id": 394, "modificationDate": "2025-08-27 22:50:00"},
+#     {"id": 395, "modificationDate": "2025-08-27 22:50:00"},
+#     {"id": 396, "modificationDate": "2025-08-27 22:50:00"},
+#     {"id": 397, "modificationDate": "2025-08-27 22:50:00"},
+#     {"id": 398, "modificationDate": "2025-08-27 22:50:00"},
+#     {"id": 399, "modificationDate": "2025-08-27 22:50:00"},
+#     {"id": 400, "modificationDate": "2025-08-27 22:50:00"}
 # ]
-#
+
+# datos_to_update = [
+#     {"id": 1007, "modificationDate": "2025-08-27 13:50:00", "posicion":"portero", "href": "/la-liga/players/ryan"}
+# ]
+
 # actualizar_varios(
 #     conn,
 #     "usuarios",
@@ -51,11 +59,10 @@ borrar_todos_los_movimientos(conn)
 # INSERTA DATOS EN UNA TABLA
 # conn = get_db_connection()
 # movimientos_realizados = [
-#     {"usuario_id": "8", "tipo":"fichaje", "jugador": "Tullido", "cantidad": 200000, "fecha":"13 ago 2025"},
-#     {"usuario_id": "12", "tipo": "venta", "jugador": "Mbappe", "cantidad": -20000000, "fecha": "13 ago 2025"},
-#     {"usuario_id": "13", "tipo":"clausulazo", "jugador": "Vinicius", "cantidad": 15000000, "fecha":"13 ago 2025"},
+#     {"tipo":"movimiento", "jugador": "haciendo una prueba", "cantidad": 0, "fecha":"2025-08-27 08:00:00"}
 # ]
 # insertar_varios(conn, "movimientos", movimientos_realizados)
+# cerrar_BBDD(conn)
 
 # jugadores = [
 #     {"nombre": "Badé", "posicion": "Defensa", "equipo": "Sevilla"}
@@ -175,3 +182,6 @@ borrar_todos_los_movimientos(conn)
 #     jugadores_to_insert = set_all_players(driver)
 #     insertar_varios(conn, 'jugadores', jugadores_to_insert)
 #     jugadores_actuales = len(obtener_registros_tabla(conn, 'jugadores'))
+
+
+# print("fichado por   ".strip())
