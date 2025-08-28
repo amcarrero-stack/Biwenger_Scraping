@@ -15,6 +15,7 @@ locale.setlocale(locale.LC_TIME, "C")
 # Variable global del módulo
 
 def do_login(driver):
+    log_message_with_print("🌐 Navegando a la página principal de Biwenger...")
     driver.get(URL_BIWENGER_HOME)
     time.sleep(3)  # Esperar a que cargue
     web_element_agree = driver.find_elements(By.ID, 'didomi-notice-agree-button')[0]
@@ -40,43 +41,37 @@ def do_login(driver):
     web_element_boton_login = driver.find_elements(By.CSS_SELECTOR, 'button.btn.squared')[0]
     web_element_boton_login.click()
 
-def do_obtener_usuarios(driver):
-    time.sleep(1)
+def obtener_usuarios_web(driver):
+    """Devuelve lista de usuarios con nombre, url, nº de jugadores y plantilla"""
     driver.get(URL_BIWENGER_LIGA)
     time.sleep(1)
     usuarios = []
-    cards = driver.find_elements(By.CSS_SELECTOR, "user-card")
-    for card in cards:
-        try:
-            # Dentro de cada card, busca el <h3><a> con el nombre de usuario
-            enlace = card.find_element(By.CSS_SELECTOR, "div.main h3 a")
-            nombre = enlace.text.strip()
-            href = enlace.get_attribute("href")
-            num_jug = card.find_element(By.CSS_SELECTOR, "div.main h4").text.split(' jug.')[0]
 
-            enlace.click()
-            time.sleep(1)
-            plantilla_to_ret = []
-            plantilla = driver.find_elements(By.CSS_SELECTOR, "player-card")
-            for jugador in plantilla:
-                nombre_jugador = jugador.find_element(By.CSS_SELECTOR, "div.main h3 a").text.strip()
-                plantilla_to_ret.append(nombre_jugador)
-
-            usuario = {
-                "name": nombre,
-                "url_name": href,
-                "num_jug": int(num_jug),
-                "plantilla": plantilla_to_ret
-            }
-
+    for card in driver.find_elements(By.CSS_SELECTOR, "user-card"):
+        usuario = parse_user_card(driver, card)
+        if usuario:
             usuarios.append(usuario)
-            boton_atras = driver.find_element(By.CSS_SELECTOR, "div.header i")
-            boton_atras.click()
-            time.sleep(1)
-        except:
-            continue  # Por si algún user-card no tiene nombre o el selector falla
-    log_message(usuarios)
     return usuarios
+
+def parse_user_card(driver, card):
+    """Parsea un user-card y devuelve dict usuario"""
+    try:
+        enlace = card.find_element(By.CSS_SELECTOR, "div.main h3 a")
+        nombre = enlace.text.strip()
+        href = enlace.get_attribute("href")
+        num_jug = int(card.find_element(By.CSS_SELECTOR, "div.main h4").text.split(' jug.')[0])
+
+        enlace.click()
+        time.sleep(1)
+        plantilla = [j.text.strip() for j in driver.find_elements(By.CSS_SELECTOR, "player-card div.main h3 a")]
+
+        driver.find_element(By.CSS_SELECTOR, "div.header i").click()
+        time.sleep(1)
+
+        return {"name": nombre, "url_name": href, "num_jug": num_jug, "plantilla": plantilla}
+    except:
+        return None
+
 
 def get_posts_until_date(driver, cutoff_datetime):
     log_message_with_print("🌐 Obteniendo post...")
@@ -139,11 +134,15 @@ def obtener_posts_wrapper(posts):
 
 def obtener_movimientos_de_jugadores(conn, jugadores_actuales, modification_date):
     jugadores_dict = obtener_jugadores_dict(jugadores_actuales)
-    movimientos_bbdd = obtener_registros_tabla(conn, 'movimientos', ['id', 'jugador', 'accion'], f"tipo='movimiento' AND fecha >= '{modification_date}' AND fecha <= datetime('now')",'')
+    modification_date_str = modification_date.strftime("%Y-%m-%d %H:%M:%S")
+    fecha_hoy = datetime.today().replace(microsecond=0)
+    fecha_hoy_str = fecha_hoy.strftime("%Y-%m-%d %H:%M:%S")
+    movimientos_bbdd = obtener_registros_tabla(conn, 'movimientos', ['id', 'jugador', 'accion'], f"tipo='movimiento' AND fecha >= '{modification_date_str}' AND fecha <= '{fecha_hoy_str}'",'')
     log_message_with_print("🌐 Obteniendo movimientos jugadores a partir de los post...")
     movimientos_jugadores = []
     movimientos_to_insert =[]
     movimientos_to_delete = []
+    movimientos_to_update = []
     for movimiento in movimientos_bbdd:
         player_name = movimiento['jugador']
         accion = movimiento['accion'].strip()
@@ -156,6 +155,12 @@ def obtener_movimientos_de_jugadores(conn, jugadores_actuales, modification_date
             nombre_equipo = accion.split('fichado por ')[1]
             movimiento = {"nombre": player_name, "equipo": nombre_equipo}
             movimientos_to_insert.append(movimiento)
+        if "transferido de" in accion:
+            equipos = accion.split('transferido de ')[1]
+            nombre_equipo = equipos.split(' a ')[1]
+            movimiento = {"id": jugadores_dict[player_name] , "nombre": player_name, "equipo": nombre_equipo}
+            movimientos_to_update.append(movimiento)
+
 
     print(f'movimientos_to_delete es: {movimientos_to_delete}')
     if movimientos_to_delete:
@@ -163,6 +168,10 @@ def obtener_movimientos_de_jugadores(conn, jugadores_actuales, modification_date
     print(f'movimientos_to_insert es: {movimientos_to_insert}')
     if movimientos_to_insert:
         movimientos_jugadores.append({"recordsToInsert": movimientos_to_insert})
+    print(f'movimientos_to_update es: {movimientos_to_update}')
+    if movimientos_to_update:
+        movimientos_jugadores.append({"recordsToUpdate": movimientos_to_update})
+
     return movimientos_jugadores
 
 def set_all_players(driver):
@@ -224,51 +233,6 @@ def add_players(driver):
 
     return jugadores
 
-def procesar_posts_wrapper(posts_wrapper, user_dict):
-    movimientos = []
-    for post in posts_wrapper:
-        try:
-            if isinstance(post.post_returned, Ventas):
-                fecha = post.post_returned.fecha
-                print(f"📉 Es una venta -> {post.post_returned.fecha}")
-                for venta in post.post_returned.ventas:
-                    print(f"   Jugador: {venta.nombre_jugador}, Acción: {venta.accion}")
-                    movimientos += procesar_venta(venta, fecha, user_dict)
-            elif isinstance(post.post_returned, Fichajes):
-                fecha = post.post_returned.fecha
-                print(f"📈 Es un fichaje -> {post.post_returned.fecha}")
-                for fichaje in post.post_returned.fichajes:
-                    print(f"   Jugador: {fichaje.nombre_jugador}, Acción: {fichaje.accion}")
-                    movimientos += procesar_fichaje(fichaje, fecha, user_dict)
-            elif isinstance(post.post_returned, Clausulazos):
-                fecha = post.post_returned.fecha
-                print(f"📈 Es un clausulazo -> {post.post_returned.fecha}")
-                for clausulazo in post.post_returned.clausulazos:
-                    print(f"   Jugador: {clausulazo.nombre_jugador}, Acción: {clausulazo.accion}")
-                    movimientos += procesar_clausulazo(clausulazo, fecha, user_dict)
-            elif isinstance(post.post_returned, Abonos):
-                fecha = post.post_returned.fecha
-                print(f"📈 Es un abono -> {post.post_returned.fecha}")
-                for abono in post.post_returned.abonos:
-                    print(f"   Jugador: {abono.nombre_jugador}, Acción: {abono.accion}")
-                    movimientos += procesar_abono(abono, fecha, user_dict)
-            elif isinstance(post.post_returned, Penalizaciones):
-                fecha = post.post_returned.fecha
-                print(f"📈 Es una penalizacion -> {post.post_returned.fecha}")
-                for penalizacion in post.post_returned.penalizaciones:
-                    print(f"   Jugador: {penalizacion.nombre_jugador}, Acción: {penalizacion.accion}")
-                    movimientos += procesar_penalizacion(penalizacion, fecha, user_dict)
-            elif isinstance(post.post_returned, Movimientos):
-                fecha = post.post_returned.fecha
-                print(f"📈 Es un movimiento -> {post.post_returned.fecha}")
-                for movimiento in post.post_returned.movimientos:
-                    print(f"   Jugador: {movimiento.nombre_jugador}, Acción: {movimiento.accion}")
-                    movimientos += procesar_movimientos(movimiento, fecha)
-        except Exception as e:
-            print(f"⚠️ Excepcion en procesar_posts: {e.__str__()}")
-            print(type(post))
-    log_message(f'movimientos to insert es {movimientos}')
-    return movimientos
 def procesar_venta(venta, fecha, user_dict):
     accion = venta.accion
     movimientos = []
@@ -352,9 +316,36 @@ def procesar_penalizacion(penalizacion, fecha, user_dict):
 
     return movimientos
 
-def procesar_movimientos(movimiento, fecha):
+def procesar_movimientos(movimiento, fecha, user_dict):
     accion = movimiento.accion
     nombre_jugador = movimiento.nombre_jugador
     movimientos_list = []
     movimientos_list.append({"tipo": "movimiento", "jugador": nombre_jugador, "accion": accion, "cantidad": 0, "fecha": str(fecha)})
     return movimientos_list
+
+
+POST_PROCESSORS = {
+    'Ventas': procesar_venta,
+    'Fichajes': procesar_fichaje,
+    'Clausulazos': procesar_clausulazo,
+    'Abonos': procesar_abono,
+    'Penalizaciones': procesar_penalizacion,
+    'Movimientos': procesar_movimientos,
+}
+
+def procesar_posts_wrapper(posts_wrapper, user_dict):
+    movimientos = []
+
+    for post in posts_wrapper:
+        try:
+            post_type = type(post.post_returned).__name__
+            processor = POST_PROCESSORS.get(post_type)
+            if processor:
+                fecha = post.post_returned.fecha
+                items = getattr(post.post_returned, post_type.lower(), [])
+                for item in items:
+                    movimientos += processor(item, fecha, user_dict)
+        except Exception as e:
+            print(f"⚠️ Error procesando post: {e}")
+    log_message(f'movimientos to insert es {movimientos}')
+    return movimientos

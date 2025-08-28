@@ -428,6 +428,23 @@ def procesar_movimientos_de_jugadores(movimientos_jugadores, conn):
                     ))
                 print(f"✅ Insertados {len(jugadores_a_insertar)} jugadores")
 
+        # 🔵 Actualizar registros
+        if "recordsToUpdate" in movimiento:
+            jugadores_a_actualizar = movimiento["recordsToUpdate"]
+            if jugadores_a_actualizar:
+                for jugador in jugadores_a_actualizar:
+                    cursor.execute("""
+                        UPDATE jugadores
+                        SET nombre = ?, equipo = ?
+                        WHERE id = ?
+                    """, (
+                        jugador.get("nombre"),
+                        jugador.get("equipo"),
+                        jugador.get("id")
+                    ))
+                print(f"🔄 Actualizados {len(jugadores_a_actualizar)} jugadores")
+
+
     conn.commit()
 
 def insertar_historial_usuarios(conn):
