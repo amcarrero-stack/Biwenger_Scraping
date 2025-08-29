@@ -14,10 +14,15 @@
         <option value="">Selecciona un usuario</option>
     </select>
 
+    <!-- Nombre y saldo -->
+    <div id="usuarioHeader" class="flex justify-between items-center w-full mb-4">
+        <h2 id="nombreUsuario" class="text-3xl font-bold text-center flex-1"></h2> <!-- Vacío al inicio -->
+        <span id="saldoUsuario" class="text-lg font-semibold ml-4"><span class="text-white">SALDO:</span> 0€</span>
+    </div>
+
     <!-- Tabs -->
     <div class="flex w-full overflow-x-auto mb-4 border-b border-gray-700">
         <button class="tab-btn flex-1 p-2 text-center text-white font-semibold bg-gray-800 hover:bg-gray-700" data-tab="plantilla">Plantilla</button>
-        <button class="tab-btn flex-1 p-2 text-center text-white font-semibold bg-gray-800 hover:bg-gray-700" data-tab="saldo">Saldo</button>
         <button class="tab-btn flex-1 p-2 text-center text-white font-semibold bg-gray-800 hover:bg-gray-700" data-tab="movimientos">Movimientos</button>
         <button class="tab-btn flex-1 p-2 text-center text-white font-semibold bg-gray-800 hover:bg-gray-700" data-tab="estadisticas">Estadísticas</button>
     </div>

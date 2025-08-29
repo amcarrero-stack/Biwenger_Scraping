@@ -23,12 +23,24 @@ async function loadCards() {
 
     const usuario = usuariosData.find(u => u.id == usuarioId);
 
-    // Traer jugadores
-    const res = await fetch(`/api/jugadores/${usuarioId}`);
-    const jugadores = await res.json();
+    // Actualizar nombre y saldo en el header
+    const nombreEl = document.getElementById("nombreUsuario");
+    const saldoEl = document.getElementById("saldoUsuario");
+    nombreEl.textContent = usuario.name;
+
+    const saldoFormateado = new Intl.NumberFormat('es-ES', {
+        style: 'currency',
+        currency: 'EUR'
+    }).format(usuario.saldo ?? 0);
+    saldoEl.innerHTML = `<span class="text-white">SALDO:</span> ${saldoFormateado}`;
+    saldoEl.className = `text-lg font-semibold ml-4 ${usuario.saldo >= 0 ? 'text-green-500' : 'text-red-500'}`;
 
     const container = document.getElementById("tabContent");
     container.innerHTML = "";
+
+    // Traer jugadores
+    const res = await fetch(`/api/jugadores/${usuarioId}`);
+    const jugadores = await res.json();
 
     // Plantilla
     const plantillaCard = document.createElement("div");
@@ -43,21 +55,10 @@ async function loadCards() {
     });
     container.appendChild(plantillaCard);
 
-    // Saldo
-    const saldoCard = document.createElement("div");
-    saldoCard.id = "saldo";
-    saldoCard.className = "tab-card bg-gray-800 rounded-lg p-4 hidden";
-    const saldoFormateado = new Intl.NumberFormat('es-ES', {
-        style: 'currency',
-        currency: 'EUR'
-    }).format(usuario?.saldo ?? 0);
-    saldoCard.innerHTML = `<h2 class="text-lg font-bold">Saldo: ${saldoFormateado}</h2>`;
-    container.appendChild(saldoCard);
-
     // Movimientos
     const movimientosCard = document.createElement("div");
     movimientosCard.id = "movimientos";
-    movimientosCard.className = "tab-card hidden flex flex-col items-center"; // contenedor flex centrado
+    movimientosCard.className = "tab-card hidden flex flex-col items-center";
     movimientosCard.innerHTML = "<h2 class='text-xl font-bold mb-2'>Movimientos</h2>";
     container.appendChild(movimientosCard);
 
@@ -77,7 +78,7 @@ async function loadCards() {
             let fecha = m.fecha;
             if (tipo !== 'ABONO' && tipo !== 'PENALIZACION' && tipo !== 'CAMBIONOMBRE') {
                 const movDiv = document.createElement("div");
-                movDiv.className = "bg-gray-700 p-4 rounded mb-2 w-full max-w-xl"; // max-w-xl centra y limita tamaño
+                movDiv.className = "bg-gray-700 p-4 rounded mb-2 w-full max-w-xl"; // centrado y tamaño limitado
                 let importeFormateado = importe
                     ? new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(importe)
                     : '';
