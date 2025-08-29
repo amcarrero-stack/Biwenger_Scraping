@@ -10,55 +10,27 @@
     <h1 class="text-3xl font-bold mb-4">Biwenger INFO</h1>
 
     <!-- Selector de usuarios -->
-    <select id="usuarioSelect" class="mb-6 p-2 rounded bg-gray-800 text-white">
+    <select id="usuarioSelect" class="mb-6 p-2 rounded bg-gray-800 text-white w-full md:w-1/2">
         <option value="">Selecciona un usuario</option>
     </select>
 
-    <!-- Contenedor de cards -->
-    <div id="cardsContainer" class="grid grid-cols-1 md:grid-cols-2 gap-6"></div>
+    <!-- Nombre y saldo -->
+    <div id="usuarioHeader" class="flex justify-between items-center w-full mb-4">
+        <h2 id="nombreUsuario" class="text-3xl font-bold text-center flex-1"></h2> <!-- Vacío al inicio -->
+        <span id="saldoUsuario" class="text-lg font-semibold ml-4"><span class="text-white">SALDO:</span> 0€</span>
+    </div>
 
-    <script>
-    async function loadUsuarios() {
-        const res = await fetch("/api/usuarios");
-        const usuarios = await res.json();
-        const select = document.getElementById("usuarioSelect");
-        usuarios.forEach(u => {
-            const option = document.createElement("option");
-            option.value = u.id;
-            option.textContent = u.name;
-            select.appendChild(option);
-        });
-        select.addEventListener("change", loadCards);
-    }
+    <!-- Tabs -->
+    <div class="flex w-full overflow-x-auto mb-4 border-b border-gray-700">
+        <button class="tab-btn flex-1 p-2 text-center text-white font-semibold bg-gray-800 hover:bg-gray-700" data-tab="plantilla">Plantilla</button>
+        <button class="tab-btn flex-1 p-2 text-center text-white font-semibold bg-gray-800 hover:bg-gray-700" data-tab="movimientos">Movimientos</button>
+        <button class="tab-btn flex-1 p-2 text-center text-white font-semibold bg-gray-800 hover:bg-gray-700" data-tab="estadisticas">Estadísticas</button>
+    </div>
 
-    async function loadCards() {
-        const usuarioId = document.getElementById("usuarioSelect").value;
-        if (!usuarioId) return;
-        const res = await fetch(`/api/jugadores/${usuarioId}`);
-        const jugadores = await res.json();
-        const container = document.getElementById("cardsContainer");
-        container.innerHTML = "";
+    <!-- Contenedor de contenido de tabs -->
+    <div id="tabContent" class="w-full grid grid-cols-1 md:grid-cols-2 gap-6"></div>
 
-        // Card grande estilo campo de fútbol
-        const campoCard = document.createElement("div");
-        campoCard.className = "bg-green-800 rounded-lg p-4";
-        campoCard.innerHTML = "<h2 class='text-xl font-bold mb-2'>Plantilla</h2>";
-        jugadores.forEach(j => {
-            const jugadorDiv = document.createElement("div");
-            jugadorDiv.className = "bg-gray-700 p-2 rounded mb-1";
-            jugadorDiv.textContent = `${j.nombre} - ${j.equipo} - ${j.posicion} - ${j.valor}`;
-            campoCard.appendChild(jugadorDiv);
-        });
-        container.appendChild(campoCard);
-
-        // Card pequeña con saldo
-        const saldoCard = document.createElement("div");
-        saldoCard.className = "bg-gray-800 rounded-lg p-4 mt-4";
-        saldoCard.innerHTML = `<h2 class="text-lg font-bold">Saldo: ${jugadores[0]?.usuario_saldo ?? '0'}M</h2>`;
-        container.appendChild(saldoCard);
-    }
-
-    loadUsuarios();
-    </script>
+    <!-- Script externo -->
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
 </body>
 </html>

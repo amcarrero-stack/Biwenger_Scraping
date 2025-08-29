@@ -13,6 +13,5 @@ Thumbs.db
 # Archivos personales de PyCharm
 .idea/
 
-*.db
 *.sqbpro
 *.db-journal
