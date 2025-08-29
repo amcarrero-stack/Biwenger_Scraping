@@ -41,4 +41,8 @@ def index():
 
 # Solo necesario para pruebas locales
 if __name__ == "__main__":
+    import sys
+    import os
+    print("DB exists:", os.path.exists(DB_PATH), file=sys.stderr)
     app.run(host="0.0.0.0", port=10000, debug=True)
+
