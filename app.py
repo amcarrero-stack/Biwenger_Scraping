@@ -8,7 +8,7 @@ app = Flask(__name__)
 CORS(app)
 
 # Ruta a la base de datos, se puede configurar vía variable de entorno
-DB_PATH = os.environ.get("DB_PATH", "Biwenger_BBDD.sqlite")
+DB_PATH = os.environ.get("DB_PATH", "BBDD/biwenger_bbdd.db")
 
 def get_conn():
     return sqlite3.connect(DB_PATH)
@@ -41,5 +41,4 @@ def index():
 
 # Solo necesario para pruebas locales
 if __name__ == "__main__":
-    # Cambiar host y puerto para probar localmente
     app.run(host="0.0.0.0", port=10000, debug=True)
