@@ -34,8 +34,16 @@
     async function loadCards() {
         const usuarioId = document.getElementById("usuarioSelect").value;
         if (!usuarioId) return;
+
+        // 1️⃣ Traer datos del usuario
+        const resUsuario = await fetch(`/api/usuarios`);
+        const usuarios = await resUsuario.json();
+        const usuario = usuarios.find(u => u.id == usuarioId);
+
+        // 2️⃣ Traer jugadores de ese usuario
         const res = await fetch(`/api/jugadores/${usuarioId}`);
         const jugadores = await res.json();
+
         const container = document.getElementById("cardsContainer");
         container.innerHTML = "";
 
@@ -51,13 +59,12 @@
         });
         container.appendChild(campoCard);
 
-        // Card pequeña con saldo
+        // Card pequeña con saldo del usuario
         const saldoCard = document.createElement("div");
         saldoCard.className = "bg-gray-800 rounded-lg p-4 mt-4";
-        saldoCard.innerHTML = `<h2 class="text-lg font-bold">Saldo: ${jugadores[0]?.usuario_saldo ?? '0'}M</h2>`;
+        saldoCard.innerHTML = `<h2 class="text-lg font-bold">Saldo: ${usuario?.saldo ?? '0'}M</h2>`;
         container.appendChild(saldoCard);
     }
-
     loadUsuarios();
     </script>
 </body>
