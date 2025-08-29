@@ -14,13 +14,24 @@
         <option value="">Selecciona un usuario</option>
     </select>
 
-    <!-- Contenedor de cards -->
-    <div id="cardsContainer" class="grid grid-cols-1 md:grid-cols-2 gap-6"></div>
+    <!-- Tabs -->
+    <div class="mb-4">
+        <button class="tab-btn bg-gray-800 px-4 py-2 rounded-l font-bold" data-tab="plantilla">Plantilla</button>
+        <button class="tab-btn bg-gray-800 px-4 py-2 font-bold" data-tab="saldo">Saldo</button>
+        <button class="tab-btn bg-gray-800 px-4 py-2 font-bold" data-tab="movimientos">Movimientos</button>
+        <button class="tab-btn bg-gray-800 px-4 py-2 rounded-r font-bold" data-tab="estadisticas">Estadísticas</button>
+    </div>
+
+    <!-- Contenedor de contenido de tabs -->
+    <div id="tabContent" class="grid grid-cols-1 md:grid-cols-2 gap-6"></div>
 
     <script>
+    let usuariosData = [];
+
     async function loadUsuarios() {
         const res = await fetch("/api/usuarios");
         const usuarios = await res.json();
+        usuariosData = usuarios; // Guardamos para no pedir otra vez
         const select = document.getElementById("usuarioSelect");
         usuarios.forEach(u => {
             const option = document.createElement("option");
@@ -28,35 +39,73 @@
             option.textContent = u.name;
             select.appendChild(option);
         });
-        select.addEventListener("change", loadCards);
+        select.addEventListener("change", () => {
+            loadCards();
+            showTab('plantilla'); // siempre mostrar Plantilla al cambiar usuario
+        });
     }
 
     async function loadCards() {
         const usuarioId = document.getElementById("usuarioSelect").value;
         if (!usuarioId) return;
+
+        const usuario = usuariosData.find(u => u.id == usuarioId);
+
         const res = await fetch(`/api/jugadores/${usuarioId}`);
         const jugadores = await res.json();
-        const container = document.getElementById("cardsContainer");
+
+        const container = document.getElementById("tabContent");
         container.innerHTML = "";
 
-        // Card grande estilo campo de fútbol
-        const campoCard = document.createElement("div");
-        campoCard.className = "bg-green-800 rounded-lg p-4";
-        campoCard.innerHTML = "<h2 class='text-xl font-bold mb-2'>Plantilla</h2>";
+        // Plantilla
+        const plantillaCard = document.createElement("div");
+        plantillaCard.id = "plantilla";
+        plantillaCard.className = "tab-card bg-green-800 rounded-lg p-4";
+        plantillaCard.innerHTML = "<h2 class='text-xl font-bold mb-2'>Plantilla</h2>";
         jugadores.forEach(j => {
             const jugadorDiv = document.createElement("div");
             jugadorDiv.className = "bg-gray-700 p-2 rounded mb-1";
             jugadorDiv.textContent = `${j.nombre} - ${j.equipo} - ${j.posicion} - ${j.valor}`;
-            campoCard.appendChild(jugadorDiv);
+            plantillaCard.appendChild(jugadorDiv);
         });
-        container.appendChild(campoCard);
+        container.appendChild(plantillaCard);
 
-        // Card pequeña con saldo
+        // Saldo
         const saldoCard = document.createElement("div");
-        saldoCard.className = "bg-gray-800 rounded-lg p-4 mt-4";
-        saldoCard.innerHTML = `<h2 class="text-lg font-bold">Saldo: ${jugadores[0]?.usuario_saldo ?? '0'}M</h2>`;
+        saldoCard.id = "saldo";
+        saldoCard.className = "tab-card bg-gray-800 rounded-lg p-4 hidden";
+        saldoCard.innerHTML = `<h2 class="text-lg font-bold">Saldo: ${usuario?.saldo ?? '0'}M</h2>`;
         container.appendChild(saldoCard);
+
+        // Movimientos
+        const movimientosCard = document.createElement("div");
+        movimientosCard.id = "movimientos";
+        movimientosCard.className = "tab-card bg-gray-700 rounded-lg p-4 hidden";
+        movimientosCard.innerHTML = "<h2 class='text-xl font-bold'>Movimientos</h2><p>Próximamente...</p>";
+        container.appendChild(movimientosCard);
+
+        // Estadísticas
+        const estadisticasCard = document.createElement("div");
+        estadisticasCard.id = "estadisticas";
+        estadisticasCard.className = "tab-card bg-gray-700 rounded-lg p-4 hidden";
+        estadisticasCard.innerHTML = "<h2 class='text-xl font-bold'>Estadísticas</h2><p>Próximamente...</p>";
+        container.appendChild(estadisticasCard);
     }
+
+    function showTab(tabName) {
+        document.querySelectorAll('.tab-card').forEach(card => {
+            card.classList.add('hidden');
+        });
+        const active = document.getElementById(tabName);
+        if (active) active.classList.remove('hidden');
+    }
+
+    // Event listeners tabs
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            showTab(btn.dataset.tab);
+        });
+    });
 
     loadUsuarios();
     </script>
