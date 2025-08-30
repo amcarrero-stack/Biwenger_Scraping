@@ -8,7 +8,7 @@ app = Flask(__name__)
 CORS(app)
 
 # Ruta a la base de datos, se puede configurar vía variable de entorno
-DB_PATH = os.environ.get("DB_PATH", "Biwenger_BBDD.sqlite")
+DB_PATH = os.environ.get("DB_PATH", "BBDD/biwenger_bbdd.db")
 
 def get_conn():
     return sqlite3.connect(DB_PATH)
@@ -34,6 +34,16 @@ def api_jugadores(usuario_id):
     conn.close()
     return jsonify(jugadores)
 
+@app.route("/api/movimientos/<int:usuario_id>")
+def api_movimientos(usuario_id):
+    conn = get_conn()
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM movimientos WHERE usuario_id = ? ORDER BY fecha DESC", (usuario_id,))
+    movimientos = [dict(row) for row in cursor.fetchall()]
+    conn.close()
+    return jsonify(movimientos)
+
 # Ruta web
 @app.route("/")
 def index():
@@ -41,5 +51,8 @@ def index():
 
 # Solo necesario para pruebas locales
 if __name__ == "__main__":
-    # Cambiar host y puerto para probar localmente
+    import sys
+    import os
+    print("DB exists:", os.path.exists(DB_PATH), file=sys.stderr)
     app.run(host="0.0.0.0", port=10000, debug=True)
+
