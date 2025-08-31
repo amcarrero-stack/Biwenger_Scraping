@@ -61,12 +61,13 @@ def parse_user_card(driver, card):
         href = enlace.get_attribute("href")
         num_jug = int(card.find_element(By.CSS_SELECTOR, "div.main h4").text.split(' jug.')[0])
 
+        time.sleep(2)
         enlace.click()
-        time.sleep(1)
+        time.sleep(2)
         plantilla = [j.text.strip() for j in driver.find_elements(By.CSS_SELECTOR, "player-card div.main h3 a")]
 
         driver.find_element(By.CSS_SELECTOR, "div.header i").click()
-        time.sleep(1)
+        time.sleep(2)
 
         return {"name": nombre, "url_name": href, "num_jug": num_jug, "plantilla": plantilla}
     except:
@@ -133,44 +134,50 @@ def obtener_posts_wrapper(posts):
     return post_wrapper_list
 
 def obtener_movimientos_de_jugadores(conn, jugadores_actuales, modification_date):
-    jugadores_dict = obtener_jugadores_dict(jugadores_actuales)
-    modification_date_str = modification_date.strftime("%Y-%m-%d %H:%M:%S")
-    fecha_hoy = datetime.today().replace(microsecond=0)
-    fecha_hoy_str = fecha_hoy.strftime("%Y-%m-%d %H:%M:%S")
-    movimientos_bbdd = obtener_registros_tabla(conn, 'movimientos', ['id', 'jugador', 'accion'], f"tipo='movimiento' AND fecha >= '{modification_date_str}' AND fecha <= '{fecha_hoy_str}'",'')
-    log_message_with_print("🌐 Obteniendo movimientos jugadores a partir de los post...")
-    movimientos_jugadores = []
-    movimientos_to_insert =[]
-    movimientos_to_delete = []
-    movimientos_to_update = []
-    for movimiento in movimientos_bbdd:
-        player_name = movimiento['jugador']
-        accion = movimiento['accion'].strip()
-        if "ha abandonado" in accion:
-            movimientos_to_delete.append(jugadores_dict[player_name])
-            print(f'El jugador {player_name} ha abandonado la competicion')
-            continue
-        if "fichado por" in accion:
-            nombre_equipo = accion.split('fichado por ')[1]
-            movimiento = {"nombre": player_name, "equipo": nombre_equipo}
-            movimientos_to_insert.append(movimiento)
-        if "transferido de" in accion:
-            equipos = accion.split('transferido de ')[1]
-            nombre_equipo = equipos.split(' a ')[1]
-            movimiento = {"id": jugadores_dict[player_name], "nombre": player_name, "equipo": nombre_equipo}
-            movimientos_to_update.append(movimiento)
+    try:
+        jugadores_dict = obtener_jugadores_dict(jugadores_actuales)
+        modification_date_str = modification_date.strftime("%Y-%m-%d %H:%M:%S")
+        fecha_hoy = datetime.today().replace(microsecond=0)
+        fecha_hoy_str = fecha_hoy.strftime("%Y-%m-%d %H:%M:%S")
+        movimientos_bbdd = obtener_registros_tabla(conn, 'movimientos', ['id', 'jugador', 'accion'], f"tipo='movimiento' AND fecha >= '{modification_date_str}' AND fecha <= '{fecha_hoy_str}'",'')
+        log_message_with_print("🌐 Obteniendo movimientos jugadores a partir de los post...")
+        movimientos_jugadores = []
+        movimientos_to_insert =[]
+        movimientos_to_delete = []
+        movimientos_to_update = []
+        for movimiento in movimientos_bbdd:
+            player_name = movimiento['jugador']
+            accion = movimiento['accion'].strip()
+            if "ha abandonado" in accion:
+                jugador_id = jugadores_dict.get(player_name)
+                if jugador_id:
+                    movimientos_to_delete.append(jugador_id)
+                    print(f'El jugador {player_name} ha abandonado la competicion')
+                continue
+            if "fichado por" in accion:
+                nombre_equipo = accion.split('fichado por ')[1]
+                movimiento = {"nombre": player_name, "equipo": nombre_equipo}
+                movimientos_to_insert.append(movimiento)
+            if "transferido de" in accion:
+                equipos = accion.split('transferido de ')[1]
+                nombre_equipo = equipos.split(' a ')[1]
+                jugador_id = jugadores_dict.get(player_name)
+                if jugador_id:
+                    movimiento = {"id": jugador_id, "nombre": player_name, "equipo": nombre_equipo}
+                    movimientos_to_update.append(movimiento)
+                continue
 
-
-    print(f'movimientos_to_delete es: {movimientos_to_delete}')
-    if movimientos_to_delete:
-        movimientos_jugadores.append({"recordsToDelete": movimientos_to_delete})
-    print(f'movimientos_to_insert es: {movimientos_to_insert}')
-    if movimientos_to_insert:
-        movimientos_jugadores.append({"recordsToInsert": movimientos_to_insert})
-    print(f'movimientos_to_update es: {movimientos_to_update}')
-    if movimientos_to_update:
-        movimientos_jugadores.append({"recordsToUpdate": movimientos_to_update})
-
+        print(f'movimientos_to_delete es: {movimientos_to_delete}')
+        if movimientos_to_delete:
+            movimientos_jugadores.append({"recordsToDelete": movimientos_to_delete})
+        print(f'movimientos_to_insert es: {movimientos_to_insert}')
+        if movimientos_to_insert:
+            movimientos_jugadores.append({"recordsToInsert": movimientos_to_insert})
+        print(f'movimientos_to_update es: {movimientos_to_update}')
+        if movimientos_to_update:
+            movimientos_jugadores.append({"recordsToUpdate": movimientos_to_update})
+    except Exception as e:
+        log_message(f"❌ Error durante la ejecución: {e}")
     return movimientos_jugadores
 
 def set_all_players(driver):
