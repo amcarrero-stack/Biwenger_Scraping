@@ -4,3 +4,4 @@ pandas
 requests
 selenium
 gunicorn
+psycopg[binary]
