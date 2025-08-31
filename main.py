@@ -25,10 +25,11 @@ def main():
             jugadores_actuales = obtener_players_bbdd(conn, driver)
             usuarios_actuales = obtener_usuarios_web(driver)
             usuarios_db = obtener_usuarios_bbdd(conn, usuarios_actuales)
-
+            print(f'usuarios_db es : {usuarios_db}')
             modification_date = get_latest_modification_date(usuarios_db)
+            time.sleep(2)
             user_dict = obtener_userIds(conn)
-
+            print(f'user_dict es : {user_dict}')
             # Procesar posts
             posts = get_posts_until_date(driver, modification_date)
             posts_wrapper = obtener_posts_wrapper(posts)
@@ -106,9 +107,13 @@ def obtener_usuarios_bbdd(conn, usuarios_actuales):
 def get_latest_modification_date(usuarios_db):
     if not usuarios_db:
         raise ValueError("No hay usuarios en la base de datos")
-    return datetime.strptime(usuarios_db[0]['modificationDate'], "%Y-%m-%d %H:%M:%S")
 
+    # Postgres devuelve las columnas en minúscula
+    mod_date = usuarios_db[0].get('modificationdate')
 
+    if isinstance(mod_date, str):
+        return datetime.strptime(mod_date, "%Y-%m-%d %H:%M:%S")
+    return mod_date
 
 # ============================
 # Entry Point
