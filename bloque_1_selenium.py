@@ -61,13 +61,13 @@ def parse_user_card(driver, card):
         href = enlace.get_attribute("href")
         num_jug = int(card.find_element(By.CSS_SELECTOR, "div.main h4").text.split(' jug.')[0])
 
-        time.sleep(2)
+        time.sleep(1)
         enlace.click()
-        time.sleep(2)
+        time.sleep(1)
         plantilla = [j.text.strip() for j in driver.find_elements(By.CSS_SELECTOR, "player-card div.main h3 a")]
 
         driver.find_element(By.CSS_SELECTOR, "div.header i").click()
-        time.sleep(2)
+        time.sleep(1)
 
         return {"name": nombre, "url_name": href, "num_jug": num_jug, "plantilla": plantilla}
     except:
