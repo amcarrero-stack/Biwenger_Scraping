@@ -81,7 +81,7 @@ def traducir_mes(fecha_str):
     traducciones = {
         "ene": "Jan", "feb": "Feb", "mar": "Mar", "abr": "Apr",
         "may": "May", "jun": "Jun", "jul": "Jul", "ago": "Aug",
-        "sep": "Sep", "oct": "Oct", "nov": "Nov", "dic": "Dec"
+        "sept": "Sep", "oct": "Oct", "nov": "Nov", "dic": "Dec"
     }
 
     # Reemplazar el mes español por inglés
