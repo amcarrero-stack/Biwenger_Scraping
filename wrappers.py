@@ -11,7 +11,7 @@ class Venta:
         return f"<nombre de jugador={self.nombre_jugador}, accion realizada={self.accion} >"
 class Ventas:
     def __init__(self, post):
-        header_div = post.find_element(By.CSS_SELECTOR, "div.header.ng-star-inserted")
+        header_div = post.find_element(By.CSS_SELECTOR, "div.header")
         date_elem = header_div.find_element(By.CSS_SELECTOR, "div.date")
         date_str = date_elem.get_attribute("title")
         post_datetime = traducir_mes(date_str)
@@ -42,7 +42,7 @@ class Fichaje:
         return f"<nombre de jugador={self.nombre_jugador}, accion realizada={self.accion} >"
 class Fichajes:
     def __init__(self, post):
-        header_div = post.find_element(By.CSS_SELECTOR, "div.header.ng-star-inserted")
+        header_div = post.find_element(By.CSS_SELECTOR, "div.header")
         date_elem = header_div.find_element(By.CSS_SELECTOR, "div.date")
         date_str = date_elem.get_attribute("title")
         post_datetime = traducir_mes(date_str)
@@ -72,7 +72,7 @@ class Clausulazo:
         return f"<nombre de jugador={self.nombre_jugador}, accion realizada={self.accion} >"
 class Clausulazos:
     def __init__(self, post):
-        header_div = post.find_element(By.CSS_SELECTOR, "div.header.ng-star-inserted")
+        header_div = post.find_element(By.CSS_SELECTOR, "div.header")
         date_elem = header_div.find_element(By.CSS_SELECTOR, "div.date")
         date_str = date_elem.get_attribute("title")
         post_datetime = traducir_mes(date_str)
@@ -134,7 +134,7 @@ class Penalizacion:
         return f"<nombre de jugador={self.nombre_jugador}, accion realizada={self.accion} >"
 class Penalizaciones:
     def __init__(self, post):
-        header_div = post.find_element(By.CSS_SELECTOR, "div.header.ng-star-inserted")
+        header_div = post.find_element(By.CSS_SELECTOR, "div.header")
         date_elem = header_div.find_element(By.CSS_SELECTOR, "div.date")
         date_str = date_elem.get_attribute("title")
         post_datetime = traducir_mes(date_str)
@@ -165,7 +165,7 @@ class Movimiento:
         return f"<nombre de jugador={self.nombre_jugador}, accion realizada={self.accion} >"
 class Movimientos:
     def __init__(self, post):
-        header_div = post.find_element(By.CSS_SELECTOR, "div.header.ng-star-inserted")
+        header_div = post.find_element(By.CSS_SELECTOR, "div.header")
         date_elem = header_div.find_element(By.CSS_SELECTOR, "div.date")
         date_str = date_elem.get_attribute("title")
         post_datetime = traducir_mes(date_str)
@@ -204,7 +204,7 @@ class Movimientos:
 class Post:
     def __init__(self, post):
         try:
-            header_div = post.find_element(By.CSS_SELECTOR, "div.header.ng-star-inserted")
+            header_div = post.find_element(By.CSS_SELECTOR, "div.header")
             h3_element = header_div.find_element(By.TAG_NAME, "h3")
             cardName = h3_element.text.strip()
             if cardName == 'FICHAJES':
@@ -228,7 +228,7 @@ class Post:
 
             if coincidencia:
                 json_str_obj = json.loads(coincidencia.group(1))
-                if json_str_obj['method'] == 'css selector' and json_str_obj['selector'] == 'div.header.ng-star-inserted' and "Fin de" in post.find_element(By.CSS_SELECTOR, "div.panel-header h3").text.strip():
+                if json_str_obj['method'] == 'css selector' and json_str_obj['selector'] == 'div.header' and check_tag_exit(post, "div.panel-header h3") and "Fin de" in post.find_element(By.CSS_SELECTOR, "div.panel-header h3").text.strip():
                     self.post_returned = Abonos(post)
     def __repr__(self):
         return f"<post_returned={self.post_returned}>"
