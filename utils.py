@@ -3,6 +3,7 @@ from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from config import CARPETA_LOGS, CHROMEDRIVER_PATH
 from datetime import datetime
+from selenium.webdriver.common.by import By
 import locale
 locale.setlocale(locale.LC_TIME, "C")
 
@@ -97,3 +98,11 @@ def traducir_mes(fecha_str):
 def print_usuarios(usuarios):
     for usuario in usuarios:
         log_message(f"ID: {usuario[0]}, Nombre: {usuario[1]}, Saldo: {usuario[2]}, URL Name: {usuario[3]}, Jugadores: {usuario[4]}, Fecha: {usuario[5]}")
+
+def check_tag_exit(post, tagToCheck):
+    exist = True
+    try:
+        post.find_element(By.CSS_SELECTOR, tagToCheck)
+    except Exception as e:
+        exist = False
+    return exist
