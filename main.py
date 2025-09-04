@@ -37,8 +37,8 @@ def main():
             insertar_varios(conn, 'movimientos', movimientos_to_insert)
 
             # Movimientos de jugadores
-            movimientos_de_jugadores = obtener_movimientos_de_jugadores(conn, jugadores_actuales, modification_date)
-            procesar_movimientos_de_jugadores(movimientos_de_jugadores, conn)
+            # movimientos_de_jugadores = obtener_movimientos_de_jugadores(conn, jugadores_actuales, modification_date)
+            # procesar_movimientos_de_jugadores(movimientos_de_jugadores, conn)
 
             # Resumen y actualización de saldos
             resumen_movimientos = obtener_resumen_movimientos(conn, user_dict, modification_date)
