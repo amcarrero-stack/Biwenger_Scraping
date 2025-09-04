@@ -30,7 +30,9 @@ async function loadCards() {
 
     const saldoFormateado = new Intl.NumberFormat('es-ES', {
         style: 'currency',
-        currency: 'EUR'
+        currency: 'EUR',
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0
     }).format(usuario.saldo ?? 0);
     saldoEl.innerHTML = `<span class="text-white">SALDO:</span> ${saldoFormateado}`;
     saldoEl.className = `text-lg font-semibold ml-4 ${usuario.saldo >= 0 ? 'text-green-500' : 'text-red-500'}`;

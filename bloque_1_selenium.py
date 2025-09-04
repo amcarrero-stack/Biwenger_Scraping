@@ -8,7 +8,7 @@ from selenium.webdriver.support.ui import Select
 from datetime import datetime, date
 from collections import Counter
 from bloque_bbdd import get_db_connection, obtener_userIds, obtener_registros_tabla, obtener_jugadores_dict
-from utils import traducir_mes, log_message, log_message_with_print
+from utils import traducir_mes, log_message, log_message_with_print, check_tag_exit
 import os
 from wrappers import Post, Ventas, Fichajes, Clausulazos, Abonos, Penalizaciones, Movimientos
 locale.setlocale(locale.LC_TIME, "C")
@@ -87,7 +87,7 @@ def get_posts_until_date(driver, cutoff_datetime):
         postToRet = []
         for post in all_posts:
             try:
-                header_div = post.find_element(By.CSS_SELECTOR, "div.header.ng-star-inserted")
+                header_div = post.find_element(By.CSS_SELECTOR, "div.header")
                 h3_element = header_div.find_element(By.TAG_NAME, "h3")
                 cardName = h3_element.text.strip()
                 date_elem = header_div.find_element(By.CSS_SELECTOR, "div.date")
@@ -109,7 +109,7 @@ def get_posts_until_date(driver, cutoff_datetime):
 
                 if coincidencia:
                     json_str_obj = json.loads(coincidencia.group(1))
-                    if json_str_obj['method'] == 'css selector' and json_str_obj['selector'] == 'div.header.ng-star-inserted' and "Fin de" in post.find_element(By.CSS_SELECTOR, "div.panel-header h3").text.strip():
+                    if json_str_obj['method'] == 'css selector' and json_str_obj['selector'] == 'div.header' and check_tag_exit(post, "div.panel-header h3") and "Fin de" in post.find_element(By.CSS_SELECTOR, "div.panel-header h3").text.strip():
                         postToRet.append(post)
                 continue
         # Hacemos scroll para cargar más posts
