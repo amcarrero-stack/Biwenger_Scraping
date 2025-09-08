@@ -1,3 +1,4 @@
+import itertools
 from pathlib import Path
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
@@ -5,6 +6,10 @@ from config import CARPETA_LOGS, CHROMEDRIVER_PATH
 from datetime import datetime
 from selenium.webdriver.common.by import By
 import locale
+import threading
+import sys
+import time
+import threading
 locale.setlocale(locale.LC_TIME, "C")
 
 # Variable global del módulo
@@ -55,7 +60,7 @@ def crear_driver():
 
 
     try:
-        log_message_with_print("🟡 Iniciando Chrome con perfil de usuario...")
+        log_message("🟡 Iniciando Chrome con perfil de usuario...")
         if not Path(CHROMEDRIVER_PATH).exists():
             raise FileNotFoundError(f"❌ Chromedriver no encontrado en {CHROMEDRIVER_PATH}")
         driver = webdriver.Chrome(options=options)
@@ -107,3 +112,31 @@ def check_tag_exit(post, tagToCheck):
     except Exception as e:
         exist = False
     return exist
+
+def spinner(initial_msg="Trabajando..."):
+    stop_event = threading.Event()
+    msg = {"text": initial_msg}  # usamos un dict mutable para poder cambiar el texto
+
+    def run():
+        for c in itertools.cycle('|/-\\'):
+            if stop_event.is_set():
+                break
+            sys.stdout.write(f'\r{msg["text"]} {c}')
+            sys.stdout.flush()
+            time.sleep(0.1)
+        sys.stdout.write('\r')  # limpia línea
+        sys.stdout.flush()
+
+    t = threading.Thread(target=run)
+    t.daemon = True
+    t.start()
+
+    # devolvemos dos funciones: stop y update
+    def stop():
+        stop_event.set()
+        t.join()
+
+    def update(new_text):
+        msg["text"] = new_text
+
+    return stop, update

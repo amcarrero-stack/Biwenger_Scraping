@@ -168,7 +168,7 @@ def obtener_jugadores_dict(jugadores):
     return {jugador['nombre']: jugador['id'] for jugador in jugadores}
 
 def actualizar_saldos_new(conn, nuevos_saldos):
-    log_message_with_print("🌐 Actualizando los saldos...")
+    log_message("🌐 Actualizando los saldos...")
     cursor = conn.cursor()
     # Obtener la fecha actual en formato "5 ago 2025"
     fecha_hoy = datetime.today().replace(microsecond=0)
@@ -187,7 +187,7 @@ def actualizar_saldos_new(conn, nuevos_saldos):
     conn.commit()
 
 def actualizar_propietarios_jugadores(conn, array_usuarios):
-    log_message_with_print("🌐 Actualizando el numero de jugadores y propietarios de jugadores...")
+    log_message("🌐 Actualizando el numero de jugadores y propietarios de jugadores...")
 
     cursor = conn.cursor()
 
@@ -291,7 +291,7 @@ def insertar_varios(conn, tabla, lista_valores):
 from datetime import datetime
 
 def obtener_resumen_movimientos(conn, user_dict, fecha_inicio_str):
-    log_message_with_print("🌐 Obteniendo resumen de los movimientos insertados...")
+    log_message("🌐 Obteniendo resumen de los movimientos insertados...")
     cursor = conn.cursor()
     resultados = []
     fecha_hoy = datetime.today()
@@ -355,7 +355,7 @@ def obtener_resumen_movimientos(conn, user_dict, fecha_inicio_str):
     return resultados
 
 def obtener_saldos_actualizados(conn, movimientos):
-    log_message_with_print("🌐 Obteniendo los saldos actualizados...")
+    log_message("🌐 Obteniendo los saldos actualizados...")
     # Obtener saldos actuales de la BBDD
     saldos_actuales = obtener_saldos(conn)  # {usuario_id: saldo}
 
@@ -399,7 +399,7 @@ def resetear_propietarios_jugadores(conn):
     """
     Establece usuario_id a NULL para todos los jugadores en la tabla jugadores.
     """
-    log_message_with_print("🌐 Reseteando propietarios de todos los jugadores...")
+    log_message("🌐 Reseteando propietarios de todos los jugadores...")
 
     cursor = conn.cursor()
     cursor.execute("UPDATE jugadores SET usuario_id = NULL")

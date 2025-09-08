@@ -1,4 +1,4 @@
-from utils import log_message, crear_driver, print_usuarios, iniciar_log, log_message_with_print
+from utils import log_message, crear_driver, print_usuarios, iniciar_log, log_message_with_print, spinner
 from bloque_1_selenium import do_login, obtener_usuarios_web, get_posts_until_date, obtener_posts_wrapper, procesar_posts_wrapper, set_all_players, obtener_movimientos_de_jugadores
 from bloque_bbdd import *
 import traceback
@@ -19,21 +19,25 @@ def main():
     iniciar_log()
     log_message_with_print("🟢 === Inicio ejecución script Biwenger === 🟢")
 
+    stop_spinner, update_spinner = spinner("🔄 Inicio Scraping Biwenger")
     try:
         with db_connection() as conn, selenium_driver() as driver:
-
+            update_spinner("⚽ Extrayendo jugadores")
             jugadores_actuales = obtener_players_bbdd(conn, driver)
+            update_spinner("⚽ Extrayendo usuarios web")
             usuarios_actuales = obtener_usuarios_web(driver)
-            print(f'usuarios_actuales es : {usuarios_actuales}')
+            update_spinner("⚽ Extrayendo usuarios bbdd")
             usuarios_db = obtener_usuarios_bbdd(conn, usuarios_actuales)
-            print(f'usuarios_db es : {usuarios_db}')
             modification_date = get_latest_modification_date(usuarios_db)
             time.sleep(2)
             user_dict = obtener_userIds(conn)
-            print(f'user_dict es : {user_dict}')
+
             # Procesar posts
+            update_spinner("⚽ Obteniendo post")
             posts = get_posts_until_date(driver, modification_date)
+            update_spinner("⚽ Obteniendo post wrapper from posts")
             posts_wrapper = obtener_posts_wrapper(posts)
+            update_spinner("⚽ Obteniendo movimientos to insert")
             movimientos_to_insert = procesar_posts_wrapper(posts_wrapper, user_dict)
             insertar_varios(conn, 'movimientos', movimientos_to_insert)
 
@@ -42,20 +46,28 @@ def main():
             # procesar_movimientos_de_jugadores(movimientos_de_jugadores, conn)
 
             # Resumen y actualización de saldos
+            update_spinner("⚽ Obteniendo resumen de movimientos")
             resumen_movimientos = obtener_resumen_movimientos(conn, user_dict, modification_date)
+            update_spinner("⚽ Obteniendo saldos actualizados")
             saldos_actualizados = obtener_saldos_actualizados(conn, resumen_movimientos)
+            update_spinner("⚽ Actualizando saldos")
             actualizar_saldos_new(conn, saldos_actualizados)
 
             # Historial y actualización de jugadores
+            update_spinner("⚽ Insertando historial de saldos")
             insertar_historial_usuarios(conn)
+            update_spinner("⚽ Reseteando propietarios de jugadores")
             resetear_propietarios_jugadores(conn)
+            update_spinner("⚽ Actualizando propietarios de jugadores")
             actualizar_propietarios_jugadores(conn, usuarios_actuales)
 
     except Exception as e:
         log_message_with_print(f"❌ Error durante la ejecución: {e}")
         traceback.print_exc()
     finally:
+        stop_spinner()  # <- aquí paras el hilo del spinner
         log_message_with_print("🟢 === Fin ejecución script Biwenger === 🟢")
+
 
 @contextmanager
 def db_connection():

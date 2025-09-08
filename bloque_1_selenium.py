@@ -15,7 +15,7 @@ locale.setlocale(locale.LC_TIME, "C")
 # Variable global del módulo
 
 def do_login(driver):
-    log_message_with_print("🌐 Navegando a la página principal de Biwenger...")
+    log_message("🌐 Navegando a la página principal de Biwenger...")
     driver.get(URL_BIWENGER_HOME)
     time.sleep(3)  # Esperar a que cargue
     # web_element_agree = driver.find_elements(By.ID, 'didomi-notice-agree-button')[0]
@@ -73,7 +73,7 @@ def parse_user_card(driver, card):
 
 
 def get_posts_until_date(driver, cutoff_datetime):
-    log_message_with_print("🌐 Obteniendo post...")
+    log_message("🌐 Obteniendo post...")
     driver.get(URL_BIWENGER_HOME)
     last_height = driver.execute_script("return document.body.scrollHeight")
     repetir = True
@@ -126,7 +126,7 @@ def is_a_valid_post(cardName):
     return cardName == 'MERCADO DE FICHAJES' or cardName == 'FICHAJES' or cardName == 'CAMBIO DE NOMBRE' or cardName == 'CLÁUSULAS' or cardName == 'ABONOS Y PENALIZACIONES' or cardName == 'MOVIMIENTO DE JUGADORES'
 
 def obtener_posts_wrapper(posts):
-    log_message_with_print("🌐 Obteniendo posts wrapper a partir de los post...")
+    log_message("🌐 Obteniendo posts wrapper a partir de los post...")
     post_wrapper_list = []
     for i, post in enumerate(posts, start=1):
         post_wrapper_list.append(Post(post))
