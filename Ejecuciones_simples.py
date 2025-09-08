@@ -21,7 +21,7 @@ locale.setlocale(locale.LC_TIME, "C")
 # borrar_todos_los_movimientos(conn)
 
 # ACTUALIZAR DATOS DE LA TABLA
-# conn = get_db_connection()
+conn = get_db_connection()
 # datos_to_update = [
 #     {"id": 97, "modificationDate": "2025-08-16", "saldo": -3039410, "num_jugadores": 13},
 #     {"id": 98, "modificationDate": "2025-08-16", "saldo": 2447900, "num_jugadores": 11},
@@ -44,28 +44,28 @@ locale.setlocale(locale.LC_TIME, "C")
 #     {"id": 408,"saldo": 276620, "modificationDate": "2025-08-28 15:00:00"}
 # ]
 
-# datos_to_update = [
-#     {"id": 401, "saldo": 2642640, "modificationDate": "2025-08-28 07:44:21"},
-#     {"id": 402, "saldo": 1135900, "modificationDate": "2025-08-28 07:44:21"},
-#     {"id": 403, "saldo": 2210158, "modificationDate": "2025-08-28 07:44:21"},
-#     {"id": 404, "saldo": 1284060, "modificationDate": "2025-08-28 07:44:21"},
-#     {"id": 405, "saldo": 2128960, "modificationDate": "2025-08-28 07:44:21"},
-#     {"id": 406, "saldo": 913579, "modificationDate": "2025-08-28 07:44:21"},
-#     {"id": 407, "saldo": -309468, "modificationDate": "2025-08-28 07:44:21"},
-#     {"id": 408, "saldo": 276620, "modificationDate": "2025-08-28 07:44:21"}
-# ]
+datos_to_update = [
+    {"id": 74, "saldo": 40000000, "modificationDate": "2025-08-01 00:00:00"},
+    {"id": 75, "saldo": 40000000, "modificationDate": "2025-08-01 00:00:00"},
+    {"id": 76, "saldo": 40000000, "modificationDate": "2025-08-01 00:00:00"},
+    {"id": 77, "saldo": 40000000, "modificationDate": "2025-08-01 00:00:00"},
+    {"id": 78, "saldo": 40000000, "modificationDate": "2025-08-01 00:00:00"},
+    {"id": 79, "saldo": 40000000,"modificationDate": "2025-08-01 00:00:00"},
+    {"id": 80, "saldo": 40000000, "modificationDate": "2025-08-01 00:00:00"},
+    {"id": 81, "saldo": 40000000, "modificationDate": "2025-08-01 00:00:00"}
+]
 
 # datos_to_update = [
 #     {"id": 403, "saldo": 2210158}
 # ]
 
-# actualizar_varios(
-#     conn,
-#     "usuarios",
-#     datos_to_update,
-#     condicion_campo="id"
-# )
-# cerrar_BBDD(conn)
+actualizar_varios(
+    conn,
+    "usuarios",
+    datos_to_update,
+    condicion_campo="id"
+)
+cerrar_BBDD(conn)
 
 # INSERTA DATOS EN UNA TABLA
 # conn = get_db_connection()
@@ -196,7 +196,3 @@ locale.setlocale(locale.LC_TIME, "C")
 
 
 # print("fichado por   ".strip())
-
-prueba = {"nombre":"Marta"}
-if "perro" not in prueba:
-    print('hola')

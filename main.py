@@ -24,6 +24,7 @@ def main():
 
             jugadores_actuales = obtener_players_bbdd(conn, driver)
             usuarios_actuales = obtener_usuarios_web(driver)
+            print(f'usuarios_actuales es : {usuarios_actuales}')
             usuarios_db = obtener_usuarios_bbdd(conn, usuarios_actuales)
             print(f'usuarios_db es : {usuarios_db}')
             modification_date = get_latest_modification_date(usuarios_db)

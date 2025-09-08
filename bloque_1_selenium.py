@@ -18,9 +18,9 @@ def do_login(driver):
     log_message_with_print("🌐 Navegando a la página principal de Biwenger...")
     driver.get(URL_BIWENGER_HOME)
     time.sleep(3)  # Esperar a que cargue
-    web_element_agree = driver.find_elements(By.ID, 'didomi-notice-agree-button')[0]
-    web_element_agree.click()
-    time.sleep(1)
+    # web_element_agree = driver.find_elements(By.ID, 'didomi-notice-agree-button')[0]
+    # web_element_agree.click()
+    # time.sleep(1)
     web_element_comienzo = driver.find_elements(By.CSS_SELECTOR, 'a.btn.primary.xl[href="/login"]')[0]
     web_element_comienzo.click()
     time.sleep(1)
@@ -46,7 +46,6 @@ def obtener_usuarios_web(driver):
     driver.get(URL_BIWENGER_LIGA)
     time.sleep(1)
     usuarios = []
-
     for card in driver.find_elements(By.CSS_SELECTOR, "user-card"):
         usuario = parse_user_card(driver, card)
         if usuario:
@@ -60,7 +59,6 @@ def parse_user_card(driver, card):
         nombre = enlace.text.strip()
         href = enlace.get_attribute("href")
         num_jug = int(card.find_element(By.CSS_SELECTOR, "div.main h4").text.split(' jug.')[0])
-
         time.sleep(1)
         enlace.click()
         time.sleep(1)
@@ -85,6 +83,7 @@ def get_posts_until_date(driver, cutoff_datetime):
         all_posts = driver.find_elements(By.CSS_SELECTOR, 'league-board-post')
         log_message_with_print(f'all_posts len es: {len(all_posts)}')
         postToRet = []
+        # driver.save_screenshot(f"captura{len(all_posts)}.png")
         for post in all_posts:
             try:
                 header_div = post.find_element(By.CSS_SELECTOR, "div.header")

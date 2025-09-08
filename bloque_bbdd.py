@@ -231,22 +231,21 @@ def actualizar_propietarios_jugadores(conn, array_usuarios):
     conn.commit()
 
 
-
 def actualizar_registro(conn, tabla, valores, condicion_campo, condicion_valor):
     """
-    Actualiza un registro en la base de datos de forma dinámica.
+    Actualiza un registro en la base de datos de forma dinámica (Postgres).
 
-    conn: conexión sqlite3
+    conn: conexión psycopg
     tabla: str → nombre de la tabla
     valores: dict → {'campo1': valor1, 'campo2': valor2, ...}
     condicion_campo: str → campo para la condición WHERE
     condicion_valor: valor de la condición
     """
-    # Genera dinámicamente "campo1 = ?, campo2 = ?"
-    set_clause = ", ".join([f"{campo} = ?" for campo in valores.keys()])
+    # Genera dinámicamente "campo1 = %s, campo2 = %s"
+    set_clause = ", ".join([f"{campo} = %s" for campo in valores.keys()])
 
     # Construye la query
-    query = f"UPDATE {tabla} SET {set_clause} WHERE {condicion_campo} = ?"
+    query = f"UPDATE {tabla} SET {set_clause} WHERE {condicion_campo} = %s"
 
     # Ejecuta con los valores más la condición
     params = list(valores.values()) + [condicion_valor]
@@ -254,6 +253,8 @@ def actualizar_registro(conn, tabla, valores, condicion_campo, condicion_valor):
     cursor = conn.cursor()
     cursor.execute(query, params)
     conn.commit()
+    cursor.close()
+
 
 def actualizar_varios(conn, tabla, lista_valores, condicion_campo):
     for item in lista_valores:
@@ -470,8 +471,6 @@ def insertar_historial_usuarios(conn):
         historial_list.append(historial_to_insert)
 
     insertar_varios(conn, 'usuarios_historial', historial_list)
-
-# UTILIDADES A PARTIR DE AQUI
 
 def borrar_todos_los_usuarios(conn):
     try:

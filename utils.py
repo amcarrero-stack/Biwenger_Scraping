@@ -45,7 +45,8 @@ def log_message_with_print(message):
 
 def crear_driver():
     options = Options()
-    # options.add_argument('--headless')
+    options.add_argument('--headless')
+    options.add_argument("--window-size=1920,1080")
     options.add_argument("--start-maximized")
     options.add_argument("--disable-save-password-bubble")
     options.add_argument('--disable-web-security')
