@@ -48,11 +48,25 @@ async function loadCards() {
     const plantillaCard = document.createElement("div");
     plantillaCard.id = "plantilla";
     plantillaCard.className = "tab-card bg-green-800 rounded-lg p-4";
-    plantillaCard.innerHTML = `<h2 class='text-xl font-bold mb-2'>Plantilla (${usuario?.num_jugadores ?? 0} jugadores)</h2>`;
+    plantillaCard.innerHTML = `<h2 class='text-xl font-bold mb-4'>Plantilla (${usuario?.num_jugadores ?? 0} jugadores)</h2>`;
+
     jugadores.forEach(j => {
         const jugadorDiv = document.createElement("div");
-        jugadorDiv.className = "bg-gray-700 p-2 rounded mb-1";
-        jugadorDiv.textContent = `${j.nombre} - ${j.equipo} - ${j.posicion} - ${j.valor}`;
+        jugadorDiv.className = "bg-gray-700 p-3 rounded mb-2 shadow-md";
+
+        const valorFormateado = new Intl.NumberFormat('es-ES', {
+            style: 'currency',
+            currency: 'EUR',
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0
+        }).format(j.valor ?? 0);
+
+        jugadorDiv.innerHTML = `
+            <p><strong>Jugador:</strong> ${j.nombre}</p>
+            <p><strong>Equipo:</strong> ${j.equipo}</p>
+            <p><strong>Posición:</strong> ${j.posicion}</p>
+            <p><strong>Valor:</strong> ${valorFormateado}</p>
+        `;
         plantillaCard.appendChild(jugadorDiv);
     });
     container.appendChild(plantillaCard);
