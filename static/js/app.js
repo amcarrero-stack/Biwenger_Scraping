@@ -44,10 +44,10 @@ async function loadCards() {
     const res = await fetch(`/api/jugadores/${usuarioId}`);
     const jugadores = await res.json();
 
-    // Plantilla
+    // Plantilla (en negro)
     const plantillaCard = document.createElement("div");
     plantillaCard.id = "plantilla";
-    plantillaCard.className = "tab-card bg-green-800 rounded-lg p-4";
+    plantillaCard.className = "tab-card bg-black rounded-lg p-4"; // negro
     plantillaCard.innerHTML = `<h2 class='text-xl font-bold mb-2'>Plantilla (${usuario?.num_jugadores ?? 0} jugadores)</h2>`;
 
     jugadores.forEach(j => {
