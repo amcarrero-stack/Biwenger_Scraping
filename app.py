@@ -68,7 +68,7 @@ def api_jugadores(usuario_id):
     # - sqlite usa ? pero como ejecutamos con un único camino (fetch_all),
     #   manejamos dos SQLs según motor para evitar incompatibilidades.
     if DATABASE_URL and HAS_PSYCOPG:
-        sql = "SELECT * FROM jugadores WHERE usuario_id = %s"
+        sql = "SELECT * FROM jugadores WHERE usuario_id = %s ORDER BY posicion"
     else:
         sql = "SELECT * FROM jugadores WHERE usuario_id = ?"
     jugadores = fetch_all(sql, (usuario_id,))
