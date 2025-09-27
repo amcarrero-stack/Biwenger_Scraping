@@ -48,13 +48,27 @@ async function loadCards() {
     const plantillaCard = document.createElement("div");
     plantillaCard.id = "plantilla";
     plantillaCard.className = "tab-card bg-green-800 rounded-lg p-4";
-    plantillaCard.innerHTML = `<h2 class='text-xl font-bold mb-4'>Plantilla (${usuario?.num_jugadores ?? 0} jugadores)</h2>`;
+    plantillaCard.innerHTML = `<h2 class='text-xl font-bold mb-2'>Plantilla (${usuario?.num_jugadores ?? 0} jugadores)</h2>`;
 
     jugadores.forEach(j => {
         const jugadorDiv = document.createElement("div");
-        jugadorDiv.className = "bg-gray-700 p-3 rounded mb-2 shadow-md";
+        jugadorDiv.className = "p-3 rounded mb-2 shadow";
 
-        const valorFormateado = new Intl.NumberFormat('es-ES', {
+        // Colores según la posición
+        let bgClass = "bg-gray-700 text-white"; // default
+        if (j.posicion?.toLowerCase() === "portero") {
+            bgClass = "bg-blue-600 text-white";
+        } else if (j.posicion?.toLowerCase() === "defensa") {
+            bgClass = "bg-green-600 text-white";
+        } else if (j.posicion?.toLowerCase() === "centrocampista") {
+            bgClass = "bg-yellow-400 text-black";
+        } else if (j.posicion?.toLowerCase() === "delantero") {
+            bgClass = "bg-red-600 text-white";
+        }
+
+        jugadorDiv.className += " " + bgClass;
+
+        let valorFormateado = new Intl.NumberFormat('es-ES', {
             style: 'currency',
             currency: 'EUR',
             minimumFractionDigits: 0,
@@ -67,6 +81,7 @@ async function loadCards() {
             <p><strong>Posición:</strong> ${j.posicion}</p>
             <p><strong>Valor:</strong> ${valorFormateado}</p>
         `;
+
         plantillaCard.appendChild(jugadorDiv);
     });
     container.appendChild(plantillaCard);
