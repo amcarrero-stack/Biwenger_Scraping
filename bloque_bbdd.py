@@ -119,7 +119,7 @@ def insertar_usuarios(conn, usuarios):
         cursor.execute('''
             INSERT INTO usuarios (name, url_name, saldo, saldo_anterior, num_jugadores, modificationDate)
             VALUES (%s, %s, %s, %s, %s, %s)
-            ON CONFLICT (name, url_name) DO NOTHING
+            ON CONFLICT (url_name) DO NOTHING
         ''', (name, url_name, saldo, saldo, num_jugadores, fecha_inicio_sql))
     conn.commit()
 

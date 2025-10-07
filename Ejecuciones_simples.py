@@ -45,14 +45,14 @@ conn = get_db_connection()
 # ]
 
 datos_to_update = [
-    {"id": 74, "saldo": 40000000, "modificationDate": "2025-08-01 00:00:00"},
-    {"id": 75, "saldo": 40000000, "modificationDate": "2025-08-01 00:00:00"},
-    {"id": 76, "saldo": 40000000, "modificationDate": "2025-08-01 00:00:00"},
-    {"id": 77, "saldo": 40000000, "modificationDate": "2025-08-01 00:00:00"},
-    {"id": 78, "saldo": 40000000, "modificationDate": "2025-08-01 00:00:00"},
-    {"id": 79, "saldo": 40000000,"modificationDate": "2025-08-01 00:00:00"},
-    {"id": 80, "saldo": 40000000, "modificationDate": "2025-08-01 00:00:00"},
-    {"id": 81, "saldo": 40000000, "modificationDate": "2025-08-01 00:00:00"}
+    {"id": 74, "saldo": -1620760, "modificationDate": "2025-09-08 12:48:44","num_jugadores": 12},
+    {"id": 75, "saldo": 8000, "modificationDate": "2025-09-08 12:48:44","num_jugadores": 12},
+    {"id": 76, "saldo": -12659040, "modificationDate": "2025-09-08 12:48:44","num_jugadores": 12},
+    {"id": 77, "saldo": 1820648, "modificationDate": "2025-09-08 12:48:44","num_jugadores": 11},
+    {"id": 78, "saldo": -6995260, "modificationDate": "2025-09-08 12:48:44","num_jugadores": 13},
+    {"id": 79, "saldo": -3434421,"modificationDate": "2025-09-08 12:48:44","num_jugadores": 12},
+    {"id": 80, "saldo": 69862, "modificationDate": "2025-09-08 12:48:44","num_jugadores": 12},
+    {"id": 81, "saldo": -2605690, "modificationDate": "2025-09-08 12:48:44","num_jugadores": 12}
 ]
 
 # datos_to_update = [
